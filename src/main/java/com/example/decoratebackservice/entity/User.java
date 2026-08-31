@@ -36,7 +36,7 @@ public class User {
     private String avatar;
 
     @ApiModelProperty(value = "昵称", required = true, example = "niname")
-    private int nickname;
+    private String nickname;
 
     @ApiModelProperty(value = "性别", required = true, example = "男")
     private int gender;
@@ -48,19 +48,13 @@ public class User {
     private int role_id;
 
     @ApiModelProperty(value = "个人简介", required = true, example = "xxx")
-    private int profile;
+    private String profile;
 
     @ApiModelProperty(value = "违禁次数", required = true, example = "3")
     private int violation_count;
 
     @ApiModelProperty(value = "账户状态", required = true, example = "1")
     private int status;
-
-    @ApiModelProperty(value = "创建时间", required = true, example = "time")
-    private int create_time;
-
-    @ApiModelProperty(value = "更新时间", required = true, example = "time")
-    private int update_time;
 
     @ApiModelProperty(value = "删除", required = true, example = "1")
     private int is_deleted;
