@@ -2,9 +2,9 @@ package com.example.decoratebackservice.entity;
 
 
 
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
@@ -14,49 +14,49 @@ import lombok.NoArgsConstructor;
  * @CreateTime:2023-12-17 16:29:49
  */
 
-@lombok.Data
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel("数据库字段")
+@Schema(description = "用户实体")
 public class User {
 
-    @ApiModelProperty(value = "用户ID", required = true, example = "1")
+    @Schema(description = "用户ID", example = "1")
     private int id;
 
-    @ApiModelProperty(value = "用户名", required = true, example = "用户名")
+    @Schema(description = "用户名", example = "用户名")
     private String username;
 
-    @ApiModelProperty(value = "电话", required = true, example = "13800000000")
+    @Schema(description = "电话", example = "13800000000")
     private String phone;
 
-    @ApiModelProperty(value = "密码", required = true, example = "123456")
+    @Schema(description = "密码", example = "123456")
     private String password;
 
-    @ApiModelProperty(value = "头像文件地址", required = true, example = "path")
+    @Schema(description = "头像文件地址", example = "path")
     private String avatar;
 
-    @ApiModelProperty(value = "昵称", required = true, example = "niname")
+    @Schema(description = "昵称", example = "niname")
     private String nickname;
 
-    @ApiModelProperty(value = "性别", required = true, example = "男")
+    @Schema(description = "性别", example = "1")
     private int gender;
 
-    @ApiModelProperty(value = "昵称", required = true, example = "1")
+    @Schema(description = "用户类型", example = "1")
     private int user_type;
 
-    @ApiModelProperty(value = "角色类型", required = true, example = "2")
+    @Schema(description = "角色类型", example = "2")
     private int role_id;
 
-    @ApiModelProperty(value = "个人简介", required = true, example = "xxx")
+    @Schema(description = "个人简介", example = "xxx")
     private String profile;
 
-    @ApiModelProperty(value = "违禁次数", required = true, example = "3")
+    @Schema(description = "违禁次数", example = "3")
     private int violation_count;
 
-    @ApiModelProperty(value = "账户状态", required = true, example = "1")
+    @Schema(description = "账户状态", example = "1")
     private int status;
 
-    @ApiModelProperty(value = "删除", required = true, example = "1")
+    @Schema(description = "逻辑删除标识", example = "1")
     private int is_deleted;
 
 

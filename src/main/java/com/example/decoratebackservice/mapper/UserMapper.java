@@ -92,7 +92,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      *
      * @param user
      */
-    @Update("update dream set ip=#{ip}  where id=#{id}")
+    @Update("update sys_user set username=#{username},phone=#{phone},password=#{password},avatar=#{avatar},nickname=#{nickname},gender=#{gender},user_type=#{user_type},role_id=#{role_id},profile=#{profile},violation_count=#{violation_count},status=#{status},is_deleted=#{is_deleted} where id=#{id}")
     void update(User user);
 
     /**
@@ -100,7 +100,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      *
      * @param id
      */
-    @Delete("delete from dream where id =#{id}")
+    @Delete("delete from sys_user where id =#{id}")
     void delete(int id);
 
 }
