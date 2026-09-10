@@ -5,6 +5,8 @@ import com.example.decoratebackservice.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * @BelongsProject:dream_house
  * @BelongsPackage:com.example.dream_house.service
@@ -49,6 +51,10 @@ public class UserService {
      */
     public User findById(int id) {
         return userMapper.findById(id);
+    }
+
+    public List<User> findAll() {
+        return userMapper.findAll();
     }
 
     /**

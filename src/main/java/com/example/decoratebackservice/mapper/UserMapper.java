@@ -3,6 +3,8 @@ package com.example.decoratebackservice.mapper;
 import com.example.decoratebackservice.entity.User;
 import org.apache.ibatis.annotations.*;
 
+import java.util.List;
+
 /**
  * @BelongsProject:dream_house
  * @BelongsPackage:com.example.dream_house.mapper
@@ -103,4 +105,6 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     @Delete("delete from sys_user where id =#{id}")
     void delete(int id);
 
+    @Select("select * from sys_user")
+    List<User> findAll();
 }

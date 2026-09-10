@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * @BelongsProject:dream_house
  * @BelongsPackage:com.example.dream_house.controller
@@ -46,5 +48,10 @@ public class UserController {
         userService.delete(id);
     }
 
+    @Operation(summary = "查询所有用户信息")
+    @GetMapping("/findAll")
+    public List<User> findAll() {
+        return userService.findAll();
+    }
 
 }

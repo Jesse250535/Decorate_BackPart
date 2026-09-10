@@ -1,13 +1,16 @@
 package com.example.decoratebackservice;
 
+import  org.mybatis.spring.annotation.MapperScan;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootTest
+@SpringBootApplication(scanBasePackages = "com.example.decoratebackservice")
+@MapperScan("com.example.decoratebackservice.mapper")
 class DecorateBackServiceApplicationTests {
-
-    @Test
-    void contextLoads() {
+    public static void main(String[] args) {
+        SpringApplication.run(DecorateBackServiceApplication.class, args);
+        SpringApplication.run(DecorateBackServiceApplicationTests.class, args);
     }
 
 }
