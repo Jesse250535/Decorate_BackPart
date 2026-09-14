@@ -1,5 +1,6 @@
 package com.example.decoratebackservice.controller;
 
+import com.example.decoratebackservice.common.Result;
 import com.example.decoratebackservice.entity.User;
 import com.example.decoratebackservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,33 +26,36 @@ public class UserController {
 
     @Operation(summary = "添加用户信息")
     @PostMapping("/insert")
-    public String insert(@RequestBody User user) {
+    public Result<String> insert(@RequestBody User user) {
         // @RequestBody注解用来绑定通过http请求中application/json类型上传的数据
-        return userService.insert(user.getUsername(), user.getPhone(), user.getPassword(), user.getAvatar(), user.getNickname(), String.valueOf(user.getGender()), String.valueOf(user.getUser_type()), user.getRole_id(), user.getProfile(), user.getViolation_count(), String.valueOf(user.getStatus()), user.getIs_deleted());
+        String result = userService.insert(user.getUsername(), user.getPhone(), user.getPassword(), user.getAvatar(), user.getNickname(), String.valueOf(user.getGender()), String.valueOf(user.getUser_type()), user.getRole_id(), user.getProfile(), user.getViolation_count(), String.valueOf(user.getStatus()), user.getIs_deleted());
+        return Result.success(result);
     }
 
     @Operation(summary = "根据ID查询用户信息")
     @GetMapping("/findById/{id}")
-    public User findById(@PathVariable int id) {
-        return userService.findById(id);
+    public Result<User> findById(@PathVariable int id) {
+        return Result.success(userService.findById(id));
     }
 
     @Operation(summary = "更新用户信息")
     @PutMapping("/update")
-    public void update(@RequestBody User user) {
+    public Result<Void> update(@RequestBody User user) {
         userService.update(user);
+        return Result.success();
     }
 
     @Operation(summary = "根据ID删除用户")
     @DeleteMapping("/delete/{id}")
-    public void deleteUser(@PathVariable int id) {
+    public Result<Void> deleteUser(@PathVariable int id) {
         userService.delete(id);
+        return Result.success();
     }
 
     @Operation(summary = "查询所有用户信息")
     @GetMapping("/findAll")
-    public List<User> findAll() {
-        return userService.findAll();
+    public Result<List<User>> findAll() {
+        return Result.success(userService.findAll());
     }
 
 }
