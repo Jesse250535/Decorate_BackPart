@@ -51,4 +51,6 @@ public class DecorationMaterialController {
     public Result<List<DecorationMaterial>> findAll() {
         return Result.success(decorationMaterialService.findAll());
     }
+
+
 }
