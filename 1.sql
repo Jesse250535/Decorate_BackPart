@@ -1,6 +1,3 @@
-CREATE DATABASE decoration_company_system;
-use decoration_company_system;
-
 /*
  Navicat Premium Data Transfer
 
@@ -14,7 +11,7 @@ use decoration_company_system;
  Target Server Version : 80044 (8.0.44)
  File Encoding         : 65001
 
- Date: 21/09/2026 18:22:17
+ Date: 24/09/2026 15:58:10
 */
 
 SET NAMES utf8mb4;
@@ -34,7 +31,7 @@ CREATE TABLE `decoration_category`  (
                                         `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                         `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
                                         PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '分类标签表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '分类标签表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_category
@@ -60,7 +57,7 @@ CREATE TABLE `decoration_comment`  (
                                        INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
                                        INDEX `idx_target`(`target_type` ASC, `target_id` ASC) USING BTREE,
                                        CONSTRAINT `fk_comment_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '评论表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '评论表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_comment
@@ -97,7 +94,7 @@ CREATE TABLE `decoration_material`  (
                                         INDEX `idx_audit_status`(`audit_status` ASC) USING BTREE,
                                         CONSTRAINT `fk_material_category` FOREIGN KEY (`category_id`) REFERENCES `decoration_category` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                                         CONSTRAINT `fk_material_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `supplier` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修材料表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修材料表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_material
@@ -128,7 +125,7 @@ CREATE TABLE `decoration_order`  (
                                      UNIQUE INDEX `uk_order_no`(`order_no` ASC) USING BTREE,
                                      INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
                                      CONSTRAINT `fk_order_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单主表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_order
@@ -166,7 +163,7 @@ CREATE TABLE `decoration_plan`  (
                                     INDEX `idx_audit_status`(`audit_status` ASC) USING BTREE,
                                     CONSTRAINT `fk_plan_category` FOREIGN KEY (`category_id`) REFERENCES `decoration_category` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                                     CONSTRAINT `fk_plan_user` FOREIGN KEY (`create_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修方案表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修方案表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_plan
@@ -190,7 +187,7 @@ CREATE TABLE `decoration_progress`  (
                                         INDEX `fk_progress_user`(`report_user_id` ASC) USING BTREE,
                                         CONSTRAINT `fk_progress_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                                         CONSTRAINT `fk_progress_user` FOREIGN KEY (`report_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修进度跟踪表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修进度跟踪表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of decoration_progress
@@ -216,7 +213,7 @@ CREATE TABLE `material_stock_record`  (
                                           INDEX `fk_stock_user`(`operate_user_id` ASC) USING BTREE,
                                           CONSTRAINT `fk_stock_material` FOREIGN KEY (`material_id`) REFERENCES `decoration_material` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                                           CONSTRAINT `fk_stock_user` FOREIGN KEY (`operate_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '材料出入库记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '材料出入库记录表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of material_stock_record
@@ -237,7 +234,7 @@ CREATE TABLE `supplier`  (
                              `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                              `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
                              PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '材料供应商表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '材料供应商表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of supplier
@@ -269,12 +266,33 @@ CREATE TABLE `sys_admin`  (
                               INDEX `idx_role_id`(`role_id` ASC) USING BTREE,
                               CONSTRAINT `sys_admin_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `sys_adminrole` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
                               CONSTRAINT `chk_sys_admin_user_type` CHECK (`user_type` = 6)
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_admin
 -- ----------------------------
-INSERT INTO `sys_admin` VALUES (1, 'admin', '12333', '$2a$10$i.7kCySnss.VsjaeV.hZ5.1wfTzmiRHGML3ZrbWwnF1OJ22p40B1e', NULL, NULL, 0, 6, 6, NULL, 0, 0, '2026-09-21 18:21:53', '2026-09-21 18:21:53', 0);
+INSERT INTO `sys_admin` VALUES (1, 'admin', '12333', '123456', NULL, NULL, 0, 6, 6, NULL, 0, 0, '2026-09-21 18:21:53', '2026-09-23 18:30:00', 0);
+
+-- ----------------------------
+-- Table structure for sys_adminrole
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_adminrole`;
+CREATE TABLE `sys_adminrole`  (
+                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                  `role_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
+                                  `role_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色标识',
+                                  `permissions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '权限标识集合',
+                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '角色备注',
+                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
+                                  PRIMARY KEY (`id`) USING BTREE,
+                                  UNIQUE INDEX `uk_adminrole_code`(`role_code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员角色权限表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_adminrole
+-- ----------------------------
+INSERT INTO `sys_adminrole` VALUES (6, '管理员', 'ROLE_ADMIN', '*', '系统最高权限管理员', '2026-09-10 21:05:52', 0);
 
 -- ----------------------------
 -- Table structure for sys_home_config
@@ -290,7 +308,7 @@ CREATE TABLE `sys_home_config`  (
                                     `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                     `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
                                     PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '首页配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '首页配置表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_home_config
@@ -313,7 +331,7 @@ CREATE TABLE `sys_notice`  (
                                PRIMARY KEY (`id`) USING BTREE,
                                INDEX `fk_notice_admin`(`create_user_id` ASC) USING BTREE,
                                CONSTRAINT `fk_notice_admin` FOREIGN KEY (`create_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统公告表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统公告表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_notice
@@ -333,7 +351,7 @@ CREATE TABLE `sys_role`  (
                              `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
                              PRIMARY KEY (`id`) USING BTREE,
                              UNIQUE INDEX `uk_role_code`(`role_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台角色权限表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台角色权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_role
@@ -345,27 +363,6 @@ INSERT INTO `sys_role` VALUES (4, '库管人员', 'ROLE_STOCK', 'stock:operate,s
 INSERT INTO `sys_role` VALUES (5, '施工人员', 'ROLE_WORKER', 'progress:report,progress:view', '负责上报装修施工进度', '2026-09-10 21:05:52', 0);
 
 -- ----------------------------
--- Table structure for sys_adminrole
--- ----------------------------
-DROP TABLE IF EXISTS `sys_adminrole`;
-CREATE TABLE `sys_adminrole`  (
-                                  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-                                  `role_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
-                                  `role_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色标识',
-                                  `permissions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '权限标识集合',
-                                  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '角色备注',
-                                  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-                                  PRIMARY KEY (`id`) USING BTREE,
-                                  UNIQUE INDEX `uk_adminrole_code`(`role_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员角色权限表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of sys_adminrole
--- ----------------------------
-INSERT INTO `sys_adminrole` VALUES (6, '管理员', 'ROLE_ADMIN', '*', '系统最高权限管理员', '2026-09-10 21:05:52', 0);
-
--- ----------------------------
 -- Table structure for sys_user
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user`;
@@ -373,6 +370,7 @@ CREATE TABLE `sys_user`  (
                              `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
                              `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户名',
                              `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
+                             `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
                              `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '加密密码',
                              `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像地址',
                              `nickname` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '昵称',
@@ -390,12 +388,15 @@ CREATE TABLE `sys_user`  (
                              UNIQUE INDEX `uk_phone`(`phone` ASC) USING BTREE,
                              INDEX `idx_role_id`(`role_id` ASC) USING BTREE,
                              CONSTRAINT `fk_user_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-                             CONSTRAINT `chk_sys_user_user_type` CHECK (`user_type` BETWEEN 1 AND 5)
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台用户表' ROW_FORMAT = Dynamic;
+                             CONSTRAINT `chk_sys_user_user_type` CHECK (`user_type` between 1 and 5)
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台用户表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
+INSERT INTO `sys_user` VALUES (1, 'gert', NULL, NULL, '123456', NULL, NULL, 0, 4, 5, NULL, 0, 0, '2026-09-23 18:08:53', '2026-09-23 18:31:06', 0);
+INSERT INTO `sys_user` VALUES (2, 'geeee', NULL, NULL, '12345678io', NULL, NULL, 0, 1, 2, NULL, 0, 0, '2026-09-23 18:32:23', '2026-09-23 18:32:23', 0);
+INSERT INTO `sys_user` VALUES (3, 'dver', NULL, NULL, '123456uu', NULL, NULL, 0, 1, 5, NULL, 0, 0, '2026-09-23 21:14:18', '2026-09-23 21:14:18', 0);
 
 -- ----------------------------
 -- Table structure for sys_visit_stat
@@ -413,7 +414,7 @@ CREATE TABLE `sys_visit_stat`  (
                                    `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '统计生成时间',
                                    PRIMARY KEY (`id`) USING BTREE,
                                    UNIQUE INDEX `uk_stat_date`(`stat_date` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统访问统计表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统访问统计表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_visit_stat
@@ -435,7 +436,7 @@ CREATE TABLE `user_feedback`  (
                                   PRIMARY KEY (`id`) USING BTREE,
                                   INDEX `fk_feedback_user`(`user_id` ASC) USING BTREE,
                                   CONSTRAINT `fk_feedback_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户意见反馈表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户意见反馈表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_feedback
@@ -456,7 +457,7 @@ CREATE TABLE `user_like_collect`  (
                                       PRIMARY KEY (`id`) USING BTREE,
                                       UNIQUE INDEX `uk_user_operate`(`user_id` ASC, `operate_type` ASC, `target_type` ASC, `target_id` ASC) USING BTREE,
                                       CONSTRAINT `fk_like_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户点赞收藏表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户点赞收藏表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_like_collect
