@@ -2,6 +2,8 @@ package com.example.decoratebackservice.exception;
 
 import com.example.decoratebackservice.common.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -46,5 +48,16 @@ public class GlobalExceptionHandler {
     public Result<?> handleRuntimeException(RuntimeException e) {
         log.error("运行时异常: ", e);
         return Result.error(e.getMessage());
+    }
+
+    /**
+     * 处理 @Valid 参数校验失败异常
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Result<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        FieldError fieldError = e.getBindingResult().getFieldError();
+        String message = fieldError == null ? "参数校验失败" : fieldError.getDefaultMessage();
+        log.warn("参数校验失败: {}", message);
+        return Result.validateFailed(message);
     }
 }
