@@ -53,6 +53,10 @@ public class UserService {
         return userMapper.findById(id);
     }
 
+    public User findByUsername(String username) {
+        return userMapper.findByUsername(username);
+    }
+
     public List<User> findAll() {
         return userMapper.findAll();
     }

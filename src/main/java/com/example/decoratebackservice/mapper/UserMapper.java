@@ -89,6 +89,9 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     @Select("select * from sys_user where id = #{id}")
     User findById(@Param("id") int id);
 
+    @Select("select * from sys_user where username = #{username}")
+    User findByUsername(@Param("username") String username);
+
     /**
      * 用Data对象来作为传参,这样语句中的#{id}、#{ip}等数据就分别对应Data对象中的id和ip等属性。
      *
