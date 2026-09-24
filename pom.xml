@@ -60,6 +60,11 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- JavaMail邮件依赖      -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
         <!--PostgreSQL 驱动（与 MySQL 驱动共存，按需切换使用哪个数据源）-->
         <dependency>
             <groupId>org.postgresql</groupId>
