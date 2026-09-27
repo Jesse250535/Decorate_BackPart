@@ -98,12 +98,6 @@
             <version>2.0.43</version>
         </dependency>
 
-        <!--Redis 起步依赖：内部默认使用 Lettuce 客户端，引入后自动配置 RedisTemplate / StringRedisTemplate-->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
     </dependencies>
 
     <build>

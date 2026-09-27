@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择身份类型</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #f5f6f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 80px;
+            margin: 0;
+        }
+        h2 {
+            color: #333;
+            font-weight: 500;
+        }
+        .tip {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+        .identity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 300px;
+        }
+        button {
+            padding: 14px 0;
+            font-size: 16px;
+            border: 1px solid #dcdcdc;
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        button:hover {
+            border-color: #c71d23;
+            color: #c71d23;
+            background: #fff5f5;
+        }
+    </style>
+</head>
+<body>
+    <h2>请选择你的身份类型</h2>
+    <div class="tip">选择后将自动为你创建本站账户</div>
+    <form class="identity-list" method="post" action="/auth/gitee/complete-register">
+        <button type="submit" name="identityType" value="客户">客户</button>
+        <button type="submit" name="identityType" value="装修爱好者">装修爱好者</button>
+        <button type="submit" name="identityType" value="购房者">购房者</button>
+        <button type="submit" name="identityType" value="家具爱好者">家具爱好者</button>
+        <button type="submit" name="identityType" value="其他">其他</button>
+    </form>
+</body>
+</html>

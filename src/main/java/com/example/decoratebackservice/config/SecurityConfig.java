@@ -76,9 +76,14 @@ public class SecurityConfig {
             .httpBasic(basic -> basic.disable())
             // 配置请求授权
             .authorizeHttpRequests(auth -> auth
-                // 放行登录接口与 Swagger 相关接口
+                // 放行登录、注册接口与 Swagger 相关接口
                 .requestMatchers(
                     "/auth/login",
+                    "/auth/register",
+                    "/auth/login-by-account",
+                    "/auth/email/**",
+                    "/auth/gitee/**",
+                    "/gitee-identity.html",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/api-docs/**",
