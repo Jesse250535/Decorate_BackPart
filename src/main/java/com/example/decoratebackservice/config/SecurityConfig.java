@@ -81,6 +81,7 @@ public class SecurityConfig {
                     "/auth/login",
                     "/auth/register",
                     "/auth/login-by-account",
+                    "/auth/admin/login",
                     "/auth/email/**",
                     "/auth/gitee/**",
                     "/gitee-identity.html",
