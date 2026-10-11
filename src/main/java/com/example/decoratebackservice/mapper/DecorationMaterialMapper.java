@@ -44,13 +44,32 @@ public interface DecorationMaterialMapper {
     @Select("select * from decoration_material")
     List<DecorationMaterial> findAll();
 
-    @Update("update decoration_material set material_name=#{material_name},cover_image=#{cover_image}," +
-            "price=#{price},spec_long=#{spec_long},spec_width=#{spec_width},spec_height=#{spec_height},unit=#{unit}," +
-            "stock=#{stock},description=#{description},category_id=#{category_id},supplier_id=#{supplier_id}," +
-            "audit_status=#{audit_status},audit_remark=#{audit_remark},sales_count=#{sales_count},status=#{status}," +
-            "is_deleted=#{is_deleted} where id=#{id}")
+    @Update("<script>" +
+            "update decoration_material " +
+            "<set>" +
+            "<if test='material_name != null'>material_name=#{material_name},</if>" +
+            "<if test='cover_image != null'>cover_image=#{cover_image},</if>" +
+            "<if test='price != null'>price=#{price},</if>" +
+            "<if test='spec_long != null'>spec_long=#{spec_long},</if>" +
+            "<if test='spec_width != null'>spec_width=#{spec_width},</if>" +
+            "<if test='spec_height != null'>spec_height=#{spec_height},</if>" +
+            "<if test='unit != null'>unit=#{unit},</if>" +
+            "<if test='stock != 0'>stock=#{stock},</if>" +
+            "<if test='description != null'>description=#{description},</if>" +
+            "<if test='category_id != 0'>category_id=#{category_id},</if>" +
+            "<if test='supplier_id != 0'>supplier_id=#{supplier_id},</if>" +
+            "<if test='audit_status != 0'>audit_status=#{audit_status},</if>" +
+            "<if test='audit_remark != null'>audit_remark=#{audit_remark},</if>" +
+            "<if test='sales_count != null'>sales_count=#{sales_count},</if>" +
+            "<if test='status != 0'>status=#{status},</if>" +
+            "<if test='is_deleted != 0'>is_deleted=#{is_deleted},</if>" +
+            "</set>" +
+            "where id=#{id}" +
+            "</script>")
     int update(DecorationMaterial material);
 
     @Delete("delete from decoration_material where id = #{id}")
     int delete(@Param("id") int id);
+
+
 }

@@ -59,7 +59,7 @@ public class DecorationMaterial {
     private String audit_remark;
 
     @Schema(description = "销量", example = "0")
-    private int sales_count;
+    private Integer sales_count;
 
     @Schema(description = "上架状态 0下架1上架", example = "0")
     private int status;
