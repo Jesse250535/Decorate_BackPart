@@ -39,4 +39,8 @@ public class SysAdminService {
     public int delete(int id) {
         return sysAdminMapper.delete(id);
     }
+
+    public SysAdmin findByUsernameAndPassword(String username, String password) {
+        return sysAdminMapper.findByUsernameAndPassword(username, password);
+    }
 }

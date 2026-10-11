@@ -49,4 +49,7 @@ public interface SysAdminMapper {
 
     @Delete("delete from sys_admin where id = #{id}")
     int delete(@Param("id") int id);
+
+    @Select("select * from sys_admin where username = #{username} and password = #{password}")
+    SysAdmin findByUsernameAndPassword(@Param("username") String username, @Param("password") String password);
 }

@@ -111,5 +111,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     @Select("select * from sys_user")
     List<User> findAll();
 
+    @Delete("delete from sys_user where username = #{username}")
+    void deleteByUsername(@Param("username") String username);
 
 }

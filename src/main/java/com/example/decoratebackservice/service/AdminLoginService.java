@@ -24,12 +24,14 @@ public class AdminLoginService {
 
     private final AdminLoginMapper adminLoginMapper;
     private final AdminRoleMapper adminRoleMapper;
+    private final SysAdminService sysAdminService;
     private final PasswordEncoder passwordEncoder;
 
     public AdminLoginService(AdminLoginMapper adminLoginMapper, AdminRoleMapper adminRoleMapper,
-                             PasswordEncoder passwordEncoder) {
+                             SysAdminService sysAdminService, PasswordEncoder passwordEncoder) {
         this.adminLoginMapper = adminLoginMapper;
         this.adminRoleMapper = adminRoleMapper;
+        this.sysAdminService = sysAdminService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -41,33 +43,40 @@ public class AdminLoginService {
      * @return 校验通过返回管理员实体，账号不存在 / 被禁用 / 密码错误返回 null
      */
     public SysAdmin authenticate(String account, String rawPassword) {
-        if (account == null || account.trim().isEmpty()) {
+        if (account == null || account.trim().isEmpty() || rawPassword == null) {
             return null;
         }
         String value = account.trim();
 
-        // 依次按用户名、昵称、手机号匹配，兼容多种登录方式，并按管理员 id 去重
-        Map<Integer, SysAdmin> distinct = new LinkedHashMap<>();
-        addIfPresent(distinct, adminLoginMapper.findByUsername(value));
-        addIfPresent(distinct, adminLoginMapper.findByNickname(value));
-        addIfPresent(distinct, adminLoginMapper.findByPhone(value));
-        List<SysAdmin> admins = new ArrayList<>(distinct.values());
+        // 优先使用 Mapper 层新增的「账户+密码」精确匹配（用户名登录）
+        SysAdmin admin = sysAdminService.findByUsernameAndPassword(value, rawPassword);
 
-        if (admins.isEmpty()) {
-            // 账号不存在，保持模糊提示，避免暴露账号信息
-            return null;
-        }
-        if (admins.size() > 1) {
-            // 昵称不唯一时无法安全定位账号
-            throw new IllegalArgumentException("该账号关联了多个管理员，请使用用户名登录");
+        if (admin == null) {
+            // 回退：兼容昵称 / 手机号登录，按账号查出候选后，再用密码编码器比对
+            Map<Integer, SysAdmin> distinct = new LinkedHashMap<>();
+            addIfPresent(distinct, adminLoginMapper.findByUsername(value));
+            addIfPresent(distinct, adminLoginMapper.findByNickname(value));
+            addIfPresent(distinct, adminLoginMapper.findByPhone(value));
+            List<SysAdmin> admins = new ArrayList<>(distinct.values());
+
+            if (admins.isEmpty()) {
+                // 账号不存在，保持模糊提示，避免暴露账号信息
+                return null;
+            }
+            if (admins.size() > 1) {
+                // 昵称不唯一时无法安全定位账号
+                throw new IllegalArgumentException("该账号关联了多个管理员，请使用用户名登录");
+            }
+
+            SysAdmin candidate = admins.get(0);
+            if (!passwordEncoder.matches(rawPassword, candidate.getPassword())) {
+                return null;
+            }
+            admin = candidate;
         }
 
-        SysAdmin admin = admins.get(0);
         // status 0正常1封禁，is_deleted 0未删1已删
         if (admin.getStatus() != 0 || admin.getIs_deleted() != 0) {
-            return null;
-        }
-        if (!passwordEncoder.matches(rawPassword, admin.getPassword())) {
             return null;
         }
         return admin;

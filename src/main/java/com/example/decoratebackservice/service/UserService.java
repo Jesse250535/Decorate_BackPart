@@ -78,4 +78,8 @@ public class UserService {
     public void delete(int id) {
         userMapper.delete(id);
     }
+
+    public void deleteByUsername(String username) {
+        userMapper.deleteByUsername(username);
+    }
 }

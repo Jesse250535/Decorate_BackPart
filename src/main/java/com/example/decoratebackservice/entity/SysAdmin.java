@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 /**
  * 管理员账号实体（sys_admin）
  */
@@ -12,7 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "管理员账号实体")
-public class SysAdmin {
+public class SysAdmin implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Schema(description = "主键ID", example = "1")
     private int id;

@@ -19,6 +19,7 @@ import java.util.List;
 
 @Tag(name = "用户管理接口")
 @RestController
+@RequestMapping("/user")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class UserController {
     @Autowired
@@ -56,6 +57,13 @@ public class UserController {
     @GetMapping("/findAll")
     public Result<List<User>> findAll() {
         return Result.success(userService.findAll());
+    }
+
+    @Operation(summary = "根据用户名删除用户")
+    @DeleteMapping("/deleteByUsername/{username}")
+    public Result<Void> deleteUserByUsername(@PathVariable String username) {
+        userService.deleteByUsername(username);
+        return Result.success();
     }
 
 }

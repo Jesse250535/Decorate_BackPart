@@ -46,6 +46,7 @@ public class DecorationMaterialController {
         return Result.success(decorationMaterialService.delete(id));
     }
 
+    //material/findAll
     @Operation(summary = "查询所有装修材料")
     @GetMapping("/findAll")
     public Result<List<DecorationMaterial>> findAll() {

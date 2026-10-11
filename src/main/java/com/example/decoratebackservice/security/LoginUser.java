@@ -14,9 +14,10 @@ public class LoginUser implements UserDetails {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 管理员账号信息
+     * 管理员账号信息（必须可序列化：登录后随 SecurityContext 存入 HttpSession，
+     * 若声明为 transient，会在 Session 序列化/反序列化后变为 null，导致 getUsername() 空指针）
      */
-    private final transient SysAdmin admin;
+    private final SysAdmin admin;
 
     /**
      * 权限集合（角色标识 + 权限标识）
