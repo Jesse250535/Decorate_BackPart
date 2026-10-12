@@ -39,4 +39,6 @@ public interface SupplierMapper {
 
     @Delete("delete from supplier where id = #{id}")
     int delete(@Param("id") int id);
+
+
 }

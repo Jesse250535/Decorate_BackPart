@@ -51,4 +51,11 @@ public class DecorationOrderController {
     public Result<List<DecorationOrder>> findAll() {
         return Result.success(decorationOrderService.findAll());
     }
+
+    @Operation(summary = "根据订单编号修改合同签订状态")
+    @PutMapping("/updateContract")
+    public Result<Integer> updateContract(@RequestParam String order_no,
+                                          @RequestParam int contract_status) {
+        return Result.success(decorationOrderService.updateContractByOrderNo(order_no, contract_status));
+    }
 }

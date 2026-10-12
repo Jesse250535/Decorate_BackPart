@@ -2,6 +2,7 @@ package com.example.decoratebackservice.controller;
 
 import com.example.decoratebackservice.common.Result;
 import com.example.decoratebackservice.config.AccountLoginRequest;
+import com.example.decoratebackservice.config.UsernameLoginRequest;
 import com.example.decoratebackservice.service.UserLoginService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,6 +45,23 @@ public class UserAccountLoginController {
         UserDetails userDetails = userLoginService.authenticate(request.getAccount(), request.getPassword());
         if (userDetails == null) {
             return Result.unauthorized("昵称/邮箱或密码错误");
+        }
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
+        securityContextRepository.saveContext(context, httpRequest, httpResponse);
+        return Result.success("登录成功", userDetails.getUsername());
+    }
+
+    @Operation(summary = "用户名登录")
+    @PostMapping("/login-by-username")
+    public Result<String> loginByUsername(@RequestBody @Valid UsernameLoginRequest request,
+                                          HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        UserDetails userDetails = userLoginService.authenticateByUsername(request.getUsername(), request.getPassword());
+        if (userDetails == null) {
+            return Result.unauthorized("用户名或密码错误");
         }
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());

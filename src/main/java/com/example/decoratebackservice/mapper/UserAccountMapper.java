@@ -34,4 +34,8 @@ public interface UserAccountMapper {
     @ResultMap("userAccountResult")
     @Select("select * from sys_user where nickname = #{nickname} and is_deleted = 0")
     List<User> findByNickname(@Param("nickname") String nickname);
+
+    @ResultMap("userAccountResult")
+    @Select("select * from sys_user where username = #{username} and is_deleted = 0")
+    List<User> findByUsername(@Param("username") String username);
 }

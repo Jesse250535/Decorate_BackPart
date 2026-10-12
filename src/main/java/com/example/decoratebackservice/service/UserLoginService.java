@@ -76,6 +76,40 @@ public class UserLoginService {
     }
 
     /**
+     * 依据用户名校验账号密码
+     *
+     * @param username    用户名
+     * @param rawPassword 明文密码
+     * @return 校验通过返回 UserDetails，账号不存在/被禁用/密码错误返回 null
+     */
+    public UserDetails authenticateByUsername(String username, String rawPassword) {
+        if (username == null || username.trim().isEmpty()) {
+            return null;
+        }
+        String value = username.trim();
+
+        List<User> users = userAccountMapper.findByUsername(value);
+        if (users.isEmpty()) {
+            // 账号不存在，保持模糊提示，避免暴露账号信息
+            return null;
+        }
+        if (users.size() > 1) {
+            // 用户名不唯一时无法安全定位账号
+            throw new IllegalArgumentException("该用户名关联了多个账号，请联系管理员");
+        }
+
+        User user = users.get(0);
+        // status 0正常1封禁
+        if (user.getStatus() != 0) {
+            return null;
+        }
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
+            return null;
+        }
+        return buildUserDetails(user);
+    }
+
+    /**
      * 构建 Spring Security 用户信息（含角色权限）
      */
     private UserDetails buildUserDetails(User user) {

@@ -35,4 +35,6 @@ public class SupplierService {
     public int delete(int id) {
         return supplierMapper.delete(id);
     }
+
+
 }
