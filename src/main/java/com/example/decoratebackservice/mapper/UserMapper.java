@@ -114,4 +114,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     @Delete("delete from sys_user where username = #{username}")
     void deleteByUsername(@Param("username") String username);
 
+    @Select("select username from sys_user where id = #{id}")
+    String findUsernameById(@Param("id") int id);
+
 }

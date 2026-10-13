@@ -37,4 +37,8 @@ public interface UserFullInfoMapper {
     @ResultMap("userFullResult")
     @Select("select * from sys_user")
     List<UserFullInfo> findAll();
+
+    @ResultMap("userFullResult")
+    @Select("select * from sys_user where username = #{username}")
+    UserFullInfo findByUsername(@Param("username") String username);
 }

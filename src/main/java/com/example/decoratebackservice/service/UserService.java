@@ -82,4 +82,14 @@ public class UserService {
     public void deleteByUsername(String username) {
         userMapper.deleteByUsername(username);
     }
+
+    /**
+     * 查询id对应的用户名
+     *
+     * @param id
+     * @return 用户名，id不存在时返回 null
+     */
+    public String findUsernameById(int id) {
+        return userMapper.findUsernameById(id);
+    }
 }

@@ -39,4 +39,21 @@ public class UserFullInfoService {
         }
         return users;
     }
+
+    /**
+     * 按用户名查询单个用户完整信息（password 置空，避免泄露）
+     *
+     * @param username 用户名
+     * @return 用户完整信息，用户名不存在时返回 null
+     */
+    public UserFullInfo findByUsername(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            return null;
+        }
+        UserFullInfo user = userFullInfoMapper.findByUsername(username.trim());
+        if (user != null) {
+            user.setPassword(null);
+        }
+        return user;
+    }
 }
