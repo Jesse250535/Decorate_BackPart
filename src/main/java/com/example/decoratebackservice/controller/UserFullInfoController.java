@@ -79,6 +79,28 @@ public class UserFullInfoController {
     }
 
     /**
+     * 更新当前登录用户自己的资料。
+     * <p>
+     * 只允许改动「个人资料」页开放的六列：nickname / phone / email / gender / user_type / profile。
+     * 目标行完全由会话 principal 的用户名决定，请求体中的 username 会被强制覆盖，
+     * 因此不存在改到他人资料的可能。管理员账号不在 sys_user 中，更新会返回失败。
+     */
+    @Operation(summary = "更新当前登录用户自己的资料（昵称/手机号/邮箱/性别/用户类型/个人简介）")
+    @PutMapping("/update")
+    public Result<String> update(@RequestBody UserFullInfo data) {
+        String username = resolveCurrentUsername();
+        if (username == null) {
+            return Result.unauthorized("未登录或会话已过期");
+        }
+        // 以会话用户名为准，忽略请求体中的任何身份字段，避免越权修改他人资料
+        data.setUsername(username);
+        if (!userFullInfoService.updateByUsername(data)) {
+            return Result.error("更新失败：当前会话未对应 sys_user 中的账号");
+        }
+        return Result.success("succeed");
+    }
+
+    /**
      * 从当前安全上下文中解析登录用户名。
      *
      * @return 用户名；未登录或无法识别时返回 null

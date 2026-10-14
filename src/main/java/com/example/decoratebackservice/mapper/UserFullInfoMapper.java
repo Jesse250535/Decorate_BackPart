@@ -41,4 +41,21 @@ public interface UserFullInfoMapper {
     @ResultMap("userFullResult")
     @Select("select * from sys_user where username = #{username}")
     UserFullInfo findByUsername(@Param("username") String username);
+
+    /**
+     * 按用户名更新「个人资料」页允许前台自行修改的列。
+     * <p>
+     * 仅包含 nickname / phone / email / gender / user_type / profile 六列。
+     * username、password、role_id、violation_count、status、is_deleted 一律不允许前台改动。
+     * update_time 列在 DDL 中已声明 ON UPDATE CURRENT_TIMESTAMP，无需显式赋值。
+     * <p>
+     * 既有 UserMapper.update 的 SQL 不含 email 列，故此处独立实现，不改动既有 Mapper。
+     *
+     * @param user 必须携带 username（作为定位条件），其余为待更新值
+     * @return 受影响行数
+     */
+    @Update("update sys_user set nickname = #{nickname}, phone = #{phone}, email = #{email}, " +
+            "gender = #{gender}, user_type = #{user_type}, profile = #{profile} " +
+            "where username = #{username}")
+    int updateByUsername(UserFullInfo user);
 }

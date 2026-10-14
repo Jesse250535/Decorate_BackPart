@@ -56,4 +56,21 @@ public class UserFullInfoService {
         }
         return user;
     }
+
+    /**
+     * 按用户名更新用户在「个人资料」页提交的可编辑字段。
+     * <p>
+     * 只更新 nickname / phone / email / gender / user_type / profile 六列，
+     * 其余列（密码、角色、状态、违规次数等）不受影响。
+     *
+     * @param user 待更新数据，必须携带 username
+     * @return 是否更新成功（受影响行数大于 0）
+     */
+    public boolean updateByUsername(UserFullInfo user) {
+        if (user == null || user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            return false;
+        }
+        user.setUsername(user.getUsername().trim());
+        return userFullInfoMapper.updateByUsername(user) > 0;
+    }
 }
