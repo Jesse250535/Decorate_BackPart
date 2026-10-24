@@ -71,5 +71,6 @@ public interface DecorationMaterialMapper {
     @Delete("delete from decoration_material where id = #{id}")
     int delete(@Param("id") int id);
 
-
+    @Select("select * from decoration_material where material_name = #{material_name}")
+    DecorationMaterial findByMaterialName(@Param("material_name") String material_name);
 }
