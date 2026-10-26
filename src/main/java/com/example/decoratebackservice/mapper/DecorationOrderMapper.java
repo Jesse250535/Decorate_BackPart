@@ -66,7 +66,7 @@ public interface DecorationOrderMapper {
     int delete(@Param("id") int id);
 
     @Update("update decoration_order set contract_status=#{contract_status} where id=#{id}")
-    int updateContractStatus(@Param("id") int id, @Param("contract_status") String contract_status);
+    int updateContractStatus(@Param("id") int id, @Param("contract_status") int contract_status);
 
     /**
      * 根据订单编号（合同编号）修改合同签订状态
@@ -79,4 +79,28 @@ public interface DecorationOrderMapper {
     int updateContractByOrderNo(@Param("order_no") String order_no,
                                 @Param("contract_status") int contract_status,
                                 @Param("contract_time") LocalDateTime contract_time);
+
+    /**
+     * 根据主键修改订单状态（退款时传 3）
+     * 订单状态：0待支付 1已支付 2已完成 3已退款
+     *
+     * @param id           订单主键
+     * @param order_status 目标订单状态
+     * @return 受影响行数
+     */
+    @Update("update decoration_order set order_status=#{order_status} where id=#{id}")
+    int updateOrderStatus(@Param("id") int id, @Param("order_status") int order_status);
+
+    /**
+     * 根据订单编号修改订单状态（退款时传 3）
+     * 订单状态：0待支付 1已支付 2已完成 3已退款
+     *
+     * @param order_no     订单编号
+     * @param order_status 目标订单状态
+     * @return 受影响行数
+     */
+    @Update("update decoration_order set order_status=#{order_status} where order_no=#{order_no}")
+    int updateOrderStatusByOrderNo(@Param("order_no") String order_no,
+                                   @Param("order_status") int order_status);
+
 }

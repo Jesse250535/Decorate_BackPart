@@ -58,4 +58,33 @@ public class DecorationOrderController {
                                           @RequestParam int contract_status) {
         return Result.success(decorationOrderService.updateContractByOrderNo(order_no, contract_status));
     }
+
+    @Operation(summary = "根据ID修改订单状态（0待支付 1已支付 2已完成 3已退款）")
+    @PutMapping("/updateStatus/{id}/{order_status}")
+    public Result<Integer> updateStatus(@PathVariable int id, @PathVariable int order_status) {
+        if (order_status < 0 || order_status > 3) {
+            return Result.validateFailed("订单状态只能是 0待支付、1已支付、2已完成、3已退款");
+        }
+        return Result.success(decorationOrderService.updateOrderStatus(id, order_status));
+    }
+
+    @Operation(summary = "根据订单编号修改订单状态（0待支付 1已支付 2已完成 3已退款）")
+    @PutMapping("/updateStatusByOrderNo/{order_no}/{order_status}")
+    public Result<Integer> updateStatusByOrderNo(@PathVariable String order_no,
+                                                 @PathVariable int order_status) {
+        if (order_status < 0 || order_status > 3) {
+            return Result.validateFailed("订单状态只能是 0待支付、1已支付、2已完成、3已退款");
+        }
+        return Result.success(decorationOrderService.updateOrderStatusByOrderNo(order_no, order_status));
+    }
+
+    @Operation(summary = "用户申请退款：直接把订单状态改为已退款（3）")
+    @PutMapping("/refund/{order_no}")
+    public Result<Integer> refund(@PathVariable String order_no) {
+        int rows = decorationOrderService.refundByOrderNo(order_no);
+        if (rows <= 0) {
+            return Result.error(404, "退款失败：订单编号不存在");
+        }
+        return Result.success("退款成功", rows);
+    }
 }
