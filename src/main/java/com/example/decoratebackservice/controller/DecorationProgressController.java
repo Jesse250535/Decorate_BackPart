@@ -3,9 +3,11 @@ package com.example.decoratebackservice.controller;
 import com.example.decoratebackservice.common.Result;
 import com.example.decoratebackservice.entity.DecorationProgress;
 import com.example.decoratebackservice.service.DecorationProgressService;
+import com.example.decoratebackservice.vo.OrderProgressVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,5 +52,18 @@ public class DecorationProgressController {
     @GetMapping("/findAll")
     public Result<List<DecorationProgress>> findAll() {
         return Result.success(decorationProgressService.findAll());
+    }
+
+    @Operation(summary = "查询当前登录用户的装修进度（仅订单已支付/已完成可查看）")
+    @GetMapping("/my")
+    public Result<List<OrderProgressVO>> myProgress(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Result.unauthorized("请先登录后再查看装修进度");
+        }
+        List<OrderProgressVO> list = decorationProgressService.findMyProgress(authentication.getName());
+        if (list.isEmpty()) {
+            return Result.success("暂无可查看的装修进度", list);
+        }
+        return Result.success(list);
     }
 }

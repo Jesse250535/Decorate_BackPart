@@ -148,6 +148,10 @@ public class AuthController {
                                          HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         UserDetails userDetails = userLoginService.authenticate(request.getAccount(), request.getPassword());
         if (userDetails == null) {
+            // 增量：密码正确但账号被封禁时返回 423，前端据此弹出「账号已封禁」窗口
+            if (userLoginService.isBannedByAccount(request.getAccount(), request.getPassword())) {
+                return Result.error(423, "你的账号已被封禁，暂时无法登录");
+            }
             return Result.unauthorized("昵称/邮箱或密码错误");
         }
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -162,6 +166,10 @@ public class AuthController {
                                           HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         UserDetails userDetails = userLoginService.authenticateByUsername(request.getUsername(), request.getPassword());
         if (userDetails == null) {
+            // 增量：密码正确但账号被封禁时返回 423，前端据此弹出「账号已封禁」窗口
+            if (userLoginService.isBannedByUsername(request.getUsername(), request.getPassword())) {
+                return Result.error(423, "你的账号已被封禁，暂时无法登录");
+            }
             return Result.unauthorized("用户名或密码错误");
         }
         Authentication authentication = new UsernamePasswordAuthenticationToken(

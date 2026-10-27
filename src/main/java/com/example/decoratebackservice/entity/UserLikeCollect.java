@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 用户点赞收藏实体（user_like_collect）
  */
@@ -31,4 +33,7 @@ public class UserLikeCollect {
 
     @Schema(description = "逻辑删除 0未删1已删", example = "0")
     private int is_deleted;
+
+    @Schema(description = "操作时间（数据库默认 CURRENT_TIMESTAMP）", example = "2026-09-18 10:00:00")
+    private LocalDateTime create_time;
 }

@@ -55,7 +55,10 @@ public interface UserFullInfoMapper {
      * @return 受影响行数
      */
     @Update("update sys_user set nickname = #{nickname}, phone = #{phone}, email = #{email}, " +
-            "gender = #{gender}, user_type = #{user_type}, profile = #{profile} " +
+            "gender = #{gender}, user_type = #{user_type}, profile = #{profile}, " +
+            // avatar 现在保存的是上传接口返回的 URL（不再是 base64）：
+            // 用 COALESCE 保证调用方没传 avatar 时保留原值，不会误清空已上传的头像
+            "avatar = COALESCE(#{avatar}, avatar) " +
             "where username = #{username}")
     int updateByUsername(UserFullInfo user);
 }

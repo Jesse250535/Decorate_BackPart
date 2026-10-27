@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 装修进度跟踪实体（decoration_progress）
  */
@@ -31,6 +33,9 @@ public class DecorationProgress {
 
     @Schema(description = "上报施工人员ID", example = "1")
     private int report_user_id;
+
+    @Schema(description = "上报时间，由数据库默认值生成")
+    private LocalDateTime create_time;
 
     @Schema(description = "逻辑删除 0未删1已删", example = "0")
     private int is_deleted;

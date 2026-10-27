@@ -93,6 +93,28 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     User findByUsername(@Param("username") String username);
 
     /**
+     * 按用户名查询用户，供员工身份判定使用。
+     * <p>
+     * 为什么不复用上面的 findByUsername：它用 select * + 自动映射，
+     * 而全局开启了驼峰映射，像 role_id 这种带下划线的列会被映射到不存在的
+     * roleId 属性上并静默丢弃，导致 role_id 恒为 0。这里显式声明映射绕开该问题，
+     * 同时不改动原有方法，避免影响既有调用方。
+     *
+     * @param username 用户名
+     * @return 用户信息（含 role_id）；不存在返回 null
+     */
+    @Results(id = "staffUserResult", value = {
+            @Result(property = "id", column = "id"),
+            @Result(property = "username", column = "username"),
+            @Result(property = "nickname", column = "nickname"),
+            @Result(property = "role_id", column = "role_id"),
+            @Result(property = "status", column = "status"),
+            @Result(property = "is_deleted", column = "is_deleted")
+    })
+    @Select("select id, username, nickname, role_id, status, is_deleted from sys_user where username = #{username}")
+    User findByUsernameForStaff(@Param("username") String username);
+
+    /**
      * 用Data对象来作为传参,这样语句中的#{id}、#{ip}等数据就分别对应Data对象中的id和ip等属性。
      *
      * @param user

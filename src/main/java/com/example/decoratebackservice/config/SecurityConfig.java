@@ -90,6 +90,10 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/api-docs/**",
                     "/v3/api-docs/**",
+                    // 上传后的图片由浏览器直接访问，必须放行；
+                    // 否则 <img src> 拿到 401，页面只显示破图
+                    "/uploads/**",
+                    "/api/uploads/**",
                     "/error"
                 ).permitAll()
                 // 其余接口均需登录后访问

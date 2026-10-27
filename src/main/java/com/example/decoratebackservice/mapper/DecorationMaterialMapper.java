@@ -71,6 +71,43 @@ public interface DecorationMaterialMapper {
     @Delete("delete from decoration_material where id = #{id}")
     int delete(@Param("id") int id);
 
+    /**
+     * 单独更新上架状态。
+     * <p>
+     * 既有的 update 用 {@code <if test='status != 0'>} 判断，把 0 当成「未提供」，
+     * 因此无法通过它下架材料；库管需要下架能力，这里补一条专用语句。
+     *
+     * @param id     材料ID
+     * @param status 0下架 1上架
+     * @return 受影响行数
+     */
+    @Update("update decoration_material set status = #{status} where id = #{id}")
+    int updateStatus(@Param("id") int id, @Param("status") int status);
+
+    /**
+     * 单独更新库存数量，理由同上：既有 update 无法把库存改为 0
+     *
+     * @param id    材料ID
+     * @param stock 库存数量
+     * @return 受影响行数
+     */
+    @Update("update decoration_material set stock = #{stock} where id = #{id}")
+    int updateStock(@Param("id") int id, @Param("stock") int stock);
+
+    /**
+     * 逻辑删除材料（把 is_deleted 置 1）。
+     * <p>
+     * 为什么不用上面的物理 delete：material_stock_record 有外键
+     * {@code fk_stock_material ... ON DELETE RESTRICT}，只要该材料有入库/出库流水，
+     * 物理删除就会抛 SQLIntegrityConstraintViolationException。
+     * 逻辑删除既能保住历史流水，也不影响仍在使用物理删除的其它调用方。
+     *
+     * @param id 材料ID
+     * @return 受影响行数
+     */
+    @Update("update decoration_material set is_deleted = 1 where id = #{id}")
+    int softDelete(@Param("id") int id);
+
     @Select("select * from decoration_material where material_name = #{material_name}")
     DecorationMaterial findByMaterialName(@Param("material_name") String material_name);
 }

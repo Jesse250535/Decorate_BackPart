@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 评论实体（decoration_comment）
  */
@@ -40,6 +42,9 @@ public class DecorationComment {
 
     @Schema(description = "审核状态 0正常1违规删除", example = "0")
     private int status;
+
+    @Schema(description = "发布时间（数据库默认 CURRENT_TIMESTAMP）", example = "2026-09-18 10:00:00")
+    private LocalDateTime create_time;
 
     @Schema(description = "逻辑删除 0未删1已删", example = "0")
     private int is_deleted;

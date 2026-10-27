@@ -57,6 +57,15 @@ public class UserService {
         return userMapper.findByUsername(username);
     }
 
+    /**
+     * 按用户名查询用户（带 role_id 显式映射），用于库管/施工身份判定
+     * <p>
+     * 与 findByUsername 的区别：后者自动映射会丢掉 role_id，详见 Mapper 注释
+     */
+    public User findByUsernameForStaff(String username) {
+        return userMapper.findByUsernameForStaff(username);
+    }
+
     public List<User> findAll() {
         return userMapper.findAll();
     }
