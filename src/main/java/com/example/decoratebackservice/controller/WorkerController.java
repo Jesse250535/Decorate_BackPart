@@ -43,6 +43,12 @@ public class WorkerController {
 
     private static final int ORDER_CONSTRUCTING = 2;
 
+    /**
+     * 合同已签订。未签订合同的订单不允许上报进度：
+     * 合同没签说明施工范围、金额尚未确认，此时上报的进度没有依据，也无法据此结算。
+     */
+    private static final int CONTRACT_SIGNED = 1;
+
     private final DecorationProgressService progressService;
     private final DecorationOrderService orderService;
     private final UserService userService;
@@ -55,7 +61,7 @@ public class WorkerController {
         this.userService = userService;
     }
 
-    @Operation(summary = "施工人员查询可上报进度的订单（已支付 / 施工中）")
+    @Operation(summary = "施工人员查询可上报进度的订单（已支付 / 施工中，且合同已签订）")
     @GetMapping("/orders")
     public Result<List<DecorationOrder>> orders(Authentication authentication) {
         if (!StaffRole.isWorker(authentication)) {
@@ -63,9 +69,14 @@ public class WorkerController {
         }
         List<DecorationOrder> result = new ArrayList<>();
         for (DecorationOrder order : orderService.findAll()) {
-            if (order.getOrder_status() == ORDER_PAID || order.getOrder_status() == ORDER_CONSTRUCTING) {
-                result.add(order);
+            if (order.getOrder_status() != ORDER_PAID && order.getOrder_status() != ORDER_CONSTRUCTING) {
+                continue;
             }
+            // 合同未签订的订单不出现在下拉里，从源头上减少施工人员选到不可上报的订单
+            if (order.getContract_status() != CONTRACT_SIGNED) {
+                continue;
+            }
+            result.add(order);
         }
         return Result.success(result);
     }
@@ -93,7 +104,8 @@ public class WorkerController {
         if (userId == null) {
             return Result.unauthorized("未找到当前登录用户");
         }
-        String error = validate(progress);
+        // 新增进度必须要求合同已签订
+        String error = validate(progress, true);
         if (error != null) {
             return Result.error(400, error);
         }
@@ -128,7 +140,8 @@ public class WorkerController {
         if (existing.getReport_user_id() != userId) {
             return Result.forbidden("只能修改自己上报的进度");
         }
-        String error = validate(progress);
+        // 修改历史记录不卡合同状态：合同未签订期间产生的旧记录仍需要能改
+        String error = validate(progress, false);
         if (error != null) {
             return Result.error(400, error);
         }
@@ -172,19 +185,26 @@ public class WorkerController {
     }
 
     /**
-     * 上报前的必填校验
+     * 上报前的校验
      *
+     * @param requireSignedContract 是否要求订单合同已签订。
+     *                              新增时true——合同未签订不允许上报；
+     *                              修改时false——早期已存在的历史记录仍允许修正，避免改不动旧数据
      * @return 错误信息；校验通过返回 null
      */
-    private String validate(DecorationProgress progress) {
+    private String validate(DecorationProgress progress, boolean requireSignedContract) {
         if (progress == null) {
             return "请求体不能为空";
         }
         if (progress.getOrder_id() <= 0) {
             return "请选择关联订单";
         }
-        if (orderService.findById(progress.getOrder_id()) == null) {
+        DecorationOrder order = orderService.findById(progress.getOrder_id());
+        if (order == null) {
             return "关联订单不存在";
+        }
+        if (requireSignedContract && order.getContract_status() != CONTRACT_SIGNED) {
+            return "该订单合同尚未签订，暂不能上报施工进度";
         }
         if (progress.getProgress_status() < 1 || progress.getProgress_status() > 5) {
             return "施工阶段只能是 1-5";
