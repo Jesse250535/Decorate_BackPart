@@ -33,6 +33,20 @@ public class EmailRegisterRequest {
     @Schema(description = "昵称", example = "小张")
     private String nickname;
 
-    @Schema(description = "身份类型文字：客户/装修爱好者/购房者/家具爱好者/其他，默认客户", example = "客户")
+    /**
+     * 注册时选择的系统角色：ROLE_USER / ROLE_PLAN_PROVIDER / ROLE_SUPPLIER /
+     * ROLE_STOCK / ROLE_WORKER / ROLE_DESIGNER / ROLE_MANAGER / ROLE_FINANCE_STAFF
+     * <p>
+     * 与账号注册（/auth/register）使用同一套 sys_role，字段名保持 role_code 以对齐前端。
+     */
+    @Schema(description = "注册时选择的系统角色标识，如 ROLE_SUPPLIER；不传则按普通用户注册",
+            example = "ROLE_SUPPLIER")
+    private String role_code;
+
+    /**
+     * 旧字段：身份类型文字（客户/装修爱好者/…），仅在未传 role_code 时作为兜底
+     */
+    @Schema(description = "身份类型文字（可选，兼容旧前端）：客户/装修爱好者/购房者/家具爱好者/其他",
+            example = "客户")
     private String identityType;
 }
