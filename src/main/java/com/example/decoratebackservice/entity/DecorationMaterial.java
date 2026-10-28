@@ -52,6 +52,9 @@ public class DecorationMaterial {
     @Schema(description = "关联供应商ID", example = "1")
     private int supplier_id;
 
+    @Schema(description = "上传人（材料供应商的 sys_user.id），用于「我上传的材料」过滤", example = "5")
+    private int create_user_id;
+
     @Schema(description = "审核状态 0待审核1通过2驳回", example = "0")
     private int audit_status;
 

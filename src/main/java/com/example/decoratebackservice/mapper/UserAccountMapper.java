@@ -38,4 +38,11 @@ public interface UserAccountMapper {
     @ResultMap("userAccountResult")
     @Select("select * from sys_user where username = #{username} and is_deleted = 0")
     List<User> findByUsername(@Param("username") String username);
+
+    /**
+     * 按主键查询用户，评论区展示评论者昵称 / 头像时使用
+     */
+    @ResultMap("userAccountResult")
+    @Select("select * from sys_user where id = #{id} and is_deleted = 0")
+    User findById(@Param("id") int id);
 }

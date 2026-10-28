@@ -23,13 +23,14 @@ public class UserRegisterController {
         this.userRegisterService = userRegisterService;
     }
 
-    @Operation(summary = "用户注册（按所选身份类型自动分配角色）")
+    @Operation(summary = "用户注册（按所选系统角色分配 role_id，用户类型默认客户）")
     @PostMapping("/register")
     public Result<String> register(@RequestBody @Valid RegisterRequest request) {
         userRegisterService.register(
                 request.getUsername(),
                 request.getPassword(),
                 request.getIdentityType(),
+                request.getRole_code(),
                 request.getPhone(),
                 request.getNickname(),
                 request.getGender());

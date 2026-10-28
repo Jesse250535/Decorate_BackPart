@@ -105,4 +105,49 @@ public interface UserLikeCollectMapper {
                        @Param("operate_type") int operate_type,
                        @Param("target_type") int target_type,
                        @Param("target_id") int target_id);
+
+    /* ==================== 以下为评论点赞相关 SQL（operate_type=1，target_type=3） ==================== */
+
+    /**
+     * 点赞评论：唯一索引 uk_user_operate 保证一个用户对同一评论只有一条记录，
+     * 重复点赞只把 is_deleted 复位为 0
+     *
+     * @param user_id   当前登录用户ID
+     * @param target_id 评论ID
+     * @return 受影响行数
+     */
+    @Insert("insert into user_like_collect (user_id,operate_type,target_type,target_id,is_deleted) " +
+            "values(#{user_id},1,3,#{target_id},0) " +
+            "on duplicate key update is_deleted = 0")
+    int upsertCommentLike(@Param("user_id") int user_id, @Param("target_id") int target_id);
+
+    /**
+     * 取消评论点赞（逻辑删除）
+     *
+     * @param user_id   当前登录用户ID
+     * @param target_id 评论ID
+     * @return 受影响行数，0 表示本来就没点赞
+     */
+    @Update("update user_like_collect set is_deleted = 1 where user_id = #{user_id} " +
+            "and operate_type = 1 and target_type = 3 and target_id = #{target_id} and is_deleted = 0")
+    int cancelCommentLike(@Param("user_id") int user_id, @Param("target_id") int target_id);
+
+    /**
+     * 判断用户是否已点赞该评论
+     *
+     * @return 有效记录数（0 或 1）
+     */
+    @Select("select count(*) from user_like_collect where user_id = #{user_id} " +
+            "and operate_type = 1 and target_type = 3 and target_id = #{target_id} and is_deleted = 0")
+    int countCommentLiked(@Param("user_id") int user_id, @Param("target_id") int target_id);
+
+    /**
+     * 查询用户点赞过的全部评论ID，用于一次性标记列表里的点赞状态，避免逐条查询
+     *
+     * @param user_id 当前登录用户ID
+     * @return 评论ID列表
+     */
+    @Select("select target_id from user_like_collect where user_id = #{user_id} " +
+            "and operate_type = 1 and target_type = 3 and is_deleted = 0")
+    List<Integer> findLikedCommentIds(@Param("user_id") int user_id);
 }

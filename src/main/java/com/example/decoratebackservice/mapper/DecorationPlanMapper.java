@@ -55,4 +55,43 @@ public interface DecorationPlanMapper {
 
     @Delete("delete from decoration_plan where id = #{id}")
     int delete(@Param("id") int id);
+
+    /* ==================== 方案提供商上传 / 设计师审核 ==================== */
+
+    /**
+     * 查询某个装修方案提供商上传的全部方案
+     *
+     * @param create_user_id 上传人 sys_user.id
+     * @return 该账号上传的方案，最新的在前
+     */
+    @ResultMap("planResult")
+    @Select("select * from decoration_plan where create_user_id = #{create_user_id} " +
+            "and is_deleted = 0 order by id desc")
+    List<DecorationPlan> findByCreateUserId(@Param("create_user_id") int create_user_id);
+
+    /**
+     * 设计师审核方案：只改审核状态与审核意见，不动方案的其它字段
+     *
+     * @param id           方案ID
+     * @param audit_status 0待审核 1通过 2驳回
+     * @param audit_remark 审核意见
+     * @return 受影响行数
+     */
+    @Update("update decoration_plan set audit_status=#{audit_status},audit_remark=#{audit_remark} where id=#{id}")
+    int audit(@Param("id") int id,
+              @Param("audit_status") int audit_status,
+              @Param("audit_remark") String audit_remark);
+
+    /**
+     * 单独改上下架状态。
+     * <p>
+     * 不能用上面的 {@code update}：它是全字段无条件覆盖，传一个只带 id/status 的对象
+     * 会把 plan_name、price 等 NOT NULL 列写成 null 直接报错。
+     *
+     * @param id     方案ID
+     * @param status 0下架 1上架
+     * @return 受影响行数
+     */
+    @Update("update decoration_plan set status=#{status} where id=#{id}")
+    int updateStatus(@Param("id") int id, @Param("status") int status);
 }

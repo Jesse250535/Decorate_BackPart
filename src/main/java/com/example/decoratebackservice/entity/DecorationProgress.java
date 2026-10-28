@@ -34,6 +34,18 @@ public class DecorationProgress {
     @Schema(description = "上报施工人员ID", example = "1")
     private int report_user_id;
 
+    @Schema(description = "审核状态 0待审核1已通过2已驳回", example = "0")
+    private int audit_status;
+
+    @Schema(description = "审核人（项目经理）ID", example = "1")
+    private int audit_user_id;
+
+    @Schema(description = "审核意见", example = "现场照片清晰，通过")
+    private String audit_remark;
+
+    @Schema(description = "审核时间")
+    private LocalDateTime audit_time;
+
     @Schema(description = "上报时间，由数据库默认值生成")
     private LocalDateTime create_time;
 

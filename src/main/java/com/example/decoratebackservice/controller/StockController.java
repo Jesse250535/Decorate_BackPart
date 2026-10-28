@@ -3,8 +3,10 @@ package com.example.decoratebackservice.controller;
 import com.example.decoratebackservice.common.Result;
 import com.example.decoratebackservice.entity.DecorationCategory;
 import com.example.decoratebackservice.entity.DecorationMaterial;
+import com.example.decoratebackservice.entity.DecorationPlan;
 import com.example.decoratebackservice.entity.Supplier;
 import com.example.decoratebackservice.mapper.DecorationCategoryMapper;
+import com.example.decoratebackservice.mapper.DecorationPlanMapper;
 import com.example.decoratebackservice.security.StaffRole;
 import com.example.decoratebackservice.service.DecorationMaterialService;
 import com.example.decoratebackservice.service.SupplierService;
@@ -51,13 +53,16 @@ public class StockController {
     private final DecorationMaterialService materialService;
     private final SupplierService supplierService;
     private final DecorationCategoryMapper categoryMapper;
+    private final DecorationPlanMapper planMapper;
 
     public StockController(DecorationMaterialService materialService,
                            SupplierService supplierService,
-                           DecorationCategoryMapper categoryMapper) {
+                           DecorationCategoryMapper categoryMapper,
+                           DecorationPlanMapper planMapper) {
         this.materialService = materialService;
         this.supplierService = supplierService;
         this.categoryMapper = categoryMapper;
+        this.planMapper = planMapper;
     }
 
     /**
@@ -187,6 +192,160 @@ public class StockController {
         // 用逻辑删除而不是物理删除：material_stock_record 的外键是 ON DELETE RESTRICT，
         // 有流水记录的材料一旦物理删除就会直接抛数据库异常
         return Result.success("删除成功", materialService.softDelete(id));
+    }
+
+    // ===== 分类管理（decoration_category）=====
+
+    /**
+     * 分类列表。
+     *
+     * @param categoryType 1装修方案分类 2装修材料分类；省略或 0 表示两种类型都返回
+     */
+    @Operation(summary = "库管查询分类列表（默认返回全部类型）")
+    @GetMapping("/categories")
+    public Result<List<DecorationCategory>> categories(
+            @RequestParam(value = "category_type", required = false) Integer categoryType,
+            Authentication authentication) {
+        if (!StaffRole.isStock(authentication)) {
+            return Result.forbidden("仅库管人员可管理分类");
+        }
+        int type = categoryType == null ? 0 : categoryType;
+        if (type != 0 && type != 1 && type != 2) {
+            return Result.error(400, "分类类型只能是 1（装修方案）或 2（装修材料）");
+        }
+        List<DecorationCategory> list = categoryMapper.findAll().stream()
+                .filter(item -> item.getIs_deleted() == 0)
+                .filter(item -> type == 0 || item.getCategory_type() == type)
+                .toList();
+        return Result.success(list);
+    }
+
+    @Operation(summary = "库管新增分类")
+    @PostMapping("/categories")
+    public Result<Integer> insertCategory(@RequestBody DecorationCategory category,
+                                          Authentication authentication) {
+        if (!StaffRole.isStock(authentication)) {
+            return Result.forbidden("仅库管人员可管理分类");
+        }
+        String error = validateCategory(category, false);
+        if (error != null) {
+            return Result.error(400, error);
+        }
+        category.setCategory_name(category.getCategory_name().trim());
+        if (nameExists(category.getCategory_name(), category.getCategory_type(), 0)) {
+            return Result.error(400, "同类型下已存在同名分类");
+        }
+        return Result.success("分类已新增", categoryMapper.insert(category));
+    }
+
+    @Operation(summary = "库管修改分类")
+    @PutMapping("/categories")
+    public Result<Integer> updateCategory(@RequestBody DecorationCategory category,
+                                          Authentication authentication) {
+        if (!StaffRole.isStock(authentication)) {
+            return Result.forbidden("仅库管人员可管理分类");
+        }
+        String error = validateCategory(category, true);
+        if (error != null) {
+            return Result.error(400, error);
+        }
+        DecorationCategory exists = categoryMapper.findById(category.getId());
+        if (exists == null || exists.getIs_deleted() == 1) {
+            return Result.error(404, "分类不存在或已删除");
+        }
+        // 自己不能挂到自己下面，避免形成环
+        if (category.getParent_id() == category.getId()) {
+            return Result.error(400, "父分类不能是自己");
+        }
+        category.setCategory_name(category.getCategory_name().trim());
+        if (nameExists(category.getCategory_name(), category.getCategory_type(), category.getId())) {
+            return Result.error(400, "同类型下已存在同名分类");
+        }
+        return Result.success("分类已更新", categoryMapper.update(category));
+    }
+
+    /**
+     * 逻辑删除分类。
+     * <p>
+     * decoration_material / decoration_plan 的 category_id 都是 ON DELETE RESTRICT 外键，
+     * 因此这里只允许删除没有被引用的分类，避免出现「材料指向一个不存在的分类」。
+     */
+    @Operation(summary = "库管删除分类（逻辑删除）")
+    @DeleteMapping("/categories/{id}")
+    public Result<Integer> deleteCategory(@PathVariable int id, Authentication authentication) {
+        if (!StaffRole.isStock(authentication)) {
+            return Result.forbidden("仅库管人员可管理分类");
+        }
+        DecorationCategory exists = categoryMapper.findById(id);
+        if (exists == null || exists.getIs_deleted() == 1) {
+            return Result.error(404, "分类不存在或已删除");
+        }
+        long materialUsed = materialService.findAll().stream()
+                .filter(item -> item.getIs_deleted() == 0 && item.getCategory_id() == id)
+                .count();
+        if (materialUsed > 0) {
+            return Result.error(400, "该分类下还有 " + materialUsed + " 件材料，无法删除");
+        }
+        long planUsed = planMapper.findAll().stream()
+                .filter(item -> item.getIs_deleted() == 0 && item.getCategory_id() == id)
+                .count();
+        if (planUsed > 0) {
+            return Result.error(400, "该分类下还有 " + planUsed + " 个装修方案，无法删除");
+        }
+        long children = categoryMapper.findAll().stream()
+                .filter(item -> item.getIs_deleted() == 0 && item.getParent_id() == id)
+                .count();
+        if (children > 0) {
+            return Result.error(400, "该分类下还有 " + children + " 个子分类，请先删除子分类");
+        }
+        return Result.success("分类已删除", categoryMapper.softDelete(id));
+    }
+
+    /**
+     * 同类型下是否已存在同名（且未删除）分类
+     *
+     * @param excludeId 修改时排除自身，新增传 0
+     */
+    private boolean nameExists(String name, int categoryType, int excludeId) {
+        return categoryMapper.findAll().stream()
+                .anyMatch(item -> item.getIs_deleted() == 0
+                        && item.getCategory_type() == categoryType
+                        && item.getId() != excludeId
+                        && name.equals(item.getCategory_name()));
+    }
+
+    /**
+     * 分类字段校验
+     *
+     * @param requireId 修改时为 true，新增时为 false
+     * @return 错误信息；校验通过返回 null
+     */
+    private String validateCategory(DecorationCategory category, boolean requireId) {
+        if (category == null) {
+            return "请求体不能为空";
+        }
+        if (requireId && category.getId() <= 0) {
+            return "缺少分类ID";
+        }
+        if (category.getCategory_name() == null || category.getCategory_name().isBlank()) {
+            return "请填写分类名称";
+        }
+        if (category.getCategory_name().trim().length() > 50) {
+            return "分类名称不能超过 50 个字符";
+        }
+        if (category.getCategory_type() != 1 && category.getCategory_type() != 2) {
+            return "分类类型只能是 1（装修方案）或 2（装修材料）";
+        }
+        if (category.getParent_id() < 0) {
+            return "父分类不存在";
+        }
+        if (category.getSort() < 0) {
+            return "排序权重不能为负数";
+        }
+        if (category.getIs_hot() != 0 && category.getIs_hot() != 1) {
+            return "热门标记只能是 0 或 1";
+        }
+        return null;
     }
 
     /**

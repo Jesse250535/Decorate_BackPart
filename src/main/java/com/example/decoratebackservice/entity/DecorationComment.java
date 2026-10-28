@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 评论实体（decoration_comment）
@@ -48,4 +49,18 @@ public class DecorationComment {
 
     @Schema(description = "逻辑删除 0未删1已删", example = "0")
     private int is_deleted;
+
+    /* ==================== 以下为详情页评论展示字段（非数据库列） ==================== */
+
+    @Schema(description = "评论者昵称（展示用，非数据库字段）", example = "装修小达人")
+    private String user_name;
+
+    @Schema(description = "评论者头像地址（展示用，非数据库字段）")
+    private String user_avatar;
+
+    @Schema(description = "当前登录用户是否已点赞（展示用，非数据库字段）")
+    private boolean liked;
+
+    @Schema(description = "该评论下的回复（展示用，非数据库字段）")
+    private List<DecorationComment> replies;
 }

@@ -52,6 +52,12 @@ public class StaffController {
         // 是否具备某角色，直接读会话中的 GrantedAuthority，比按 role_id 猜更可靠
         vo.setIs_stock(StaffRole.isStock(authentication) ? 1 : 0);
         vo.setIs_worker(StaffRole.isWorker(authentication) ? 1 : 0);
+        // 新增的各岗位主页判定：前端据此决定展示哪个管理入口
+        vo.setIs_supplier(StaffRole.isSupplier(authentication) ? 1 : 0);
+        vo.setIs_plan_provider(StaffRole.isPlanProvider(authentication) ? 1 : 0);
+        vo.setIs_designer(StaffRole.isDesigner(authentication) ? 1 : 0);
+        vo.setIs_manager(StaffRole.isManager(authentication) ? 1 : 0);
+        vo.setIs_finance(StaffRole.isFinance(authentication) ? 1 : 0);
 
         User user = userService.findByUsernameForStaff(username);
         if (user == null) {
@@ -65,6 +71,8 @@ public class StaffController {
         vo.setUser_id(user.getId());
         vo.setNickname(user.getNickname());
         vo.setRole_id(user.getRole_id());
+        vo.setUser_type(user.getUser_type());
+        vo.setUser_type_chosen(user.getUser_type_chosen());
 
         Role role = roleService.findById(user.getRole_id());
         if (role == null) {

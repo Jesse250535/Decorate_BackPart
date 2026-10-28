@@ -24,6 +24,10 @@ public interface DecorationProgressMapper {
             @Result(property = "status_desc", column = "status_desc"),
             @Result(property = "progress_images", column = "progress_images"),
             @Result(property = "report_user_id", column = "report_user_id"),
+            @Result(property = "audit_status", column = "audit_status"),
+            @Result(property = "audit_user_id", column = "audit_user_id"),
+            @Result(property = "audit_remark", column = "audit_remark"),
+            @Result(property = "audit_time", column = "audit_time"),
             @Result(property = "create_time", column = "create_time"),
             @Result(property = "is_deleted", column = "is_deleted")
     })
@@ -57,6 +61,27 @@ public interface DecorationProgressMapper {
     int delete(@Param("id") int id);
 
     /**
+     * 项目经理审核施工进度：写入审核状态、审核人、审核意见与审核时间
+     * <p>
+     * 用专用语句而不是复用 update：update 需要整行字段，审核时只应改动审核相关列，
+     * 否则容易把施工人员填的进度说明覆盖成空值。
+     *
+     * @param id           进度记录ID
+     * @param audit_status 0待审核 1已通过 2已驳回
+     * @param audit_user_id 审核人ID
+     * @param audit_remark 审核意见
+     * @param audit_time   审核时间
+     * @return 受影响行数
+     */
+    @Update("update decoration_progress set audit_status=#{audit_status},audit_user_id=#{audit_user_id}," +
+            "audit_remark=#{audit_remark},audit_time=#{audit_time} where id=#{id}")
+    int audit(@Param("id") int id,
+              @Param("audit_status") int audit_status,
+              @Param("audit_user_id") int audit_user_id,
+              @Param("audit_remark") String audit_remark,
+              @Param("audit_time") java.time.LocalDateTime audit_time);
+
+    /**
      * 查询某个用户的全部订单，并带出每个订单最新的一条装修进度
      * <p>
      * 用相关子查询取 max(id)，保证一个订单只返回一行（最新上报记录）。
@@ -84,7 +109,9 @@ public interface DecorationProgressMapper {
             "from decoration_order o " +
             "left join decoration_progress p on p.id = (" +
             "select max(p2.id) from decoration_progress p2 " +
-            "where p2.order_id = o.id and p2.is_deleted = 0) " +
+            // 只取「项目经理审核通过」的进度：未通过或待审核的上报不展示给客户，
+            // 审核未过时自动回退到上一条已通过的进度
+            "where p2.order_id = o.id and p2.is_deleted = 0 and p2.audit_status = 1) " +
             "where o.user_id = #{user_id} and o.is_deleted = 0 " +
             "order by o.id desc")
     List<OrderProgressVO> findOrderProgressByUserId(@Param("user_id") int user_id);

@@ -12,10 +12,11 @@ import java.util.List;
 public interface DecorationMaterialMapper {
 
     @Insert("insert into decoration_material (material_name,cover_image,price,spec_long,spec_width,spec_height," +
-            "unit,stock,description,category_id,supplier_id,audit_status,audit_remark,sales_count,status,is_deleted) " +
+            "unit,stock,description,category_id,supplier_id,create_user_id,audit_status,audit_remark,sales_count," +
+            "status,is_deleted) " +
             "values(#{material_name},#{cover_image},#{price},#{spec_long},#{spec_width},#{spec_height},#{unit}," +
-            "#{stock},#{description},#{category_id},#{supplier_id},#{audit_status},#{audit_remark},#{sales_count}," +
-            "#{status},#{is_deleted})")
+            "#{stock},#{description},#{category_id},#{supplier_id},#{create_user_id},#{audit_status},#{audit_remark}," +
+            "#{sales_count},#{status},#{is_deleted})")
     int insert(DecorationMaterial material);
 
     @Results(id = "materialResult", value = {
@@ -31,6 +32,7 @@ public interface DecorationMaterialMapper {
             @Result(property = "description", column = "description"),
             @Result(property = "category_id", column = "category_id"),
             @Result(property = "supplier_id", column = "supplier_id"),
+            @Result(property = "create_user_id", column = "create_user_id"),
             @Result(property = "audit_status", column = "audit_status"),
             @Result(property = "audit_remark", column = "audit_remark"),
             @Result(property = "sales_count", column = "sales_count"),
@@ -110,4 +112,34 @@ public interface DecorationMaterialMapper {
 
     @Select("select * from decoration_material where material_name = #{material_name}")
     DecorationMaterial findByMaterialName(@Param("material_name") String material_name);
+
+    /* ==================== 材料供应商上传 / 库管审核 ==================== */
+
+    /**
+     * 查询某个材料供应商上传的全部材料（含待审核 / 已驳回 / 已通过）
+     *
+     * @param create_user_id 上传人 sys_user.id
+     * @return 该供应商上传的材料，最新的在前
+     */
+    @ResultMap("materialResult")
+    @Select("select * from decoration_material where create_user_id = #{create_user_id} " +
+            "and is_deleted = 0 order by id desc")
+    List<DecorationMaterial> findByCreateUserId(@Param("create_user_id") int create_user_id);
+
+    /**
+     * 库管审核材料：只改审核状态与审核意见
+     * <p>
+     * 复用 update 不可行：它的 {@code <if test='audit_status != 0'>} 会把「通过待审核」
+     * 当作未传值处理，无法把状态改回 0，也无法只更新审核列。
+     *
+     * @param id           材料ID
+     * @param audit_status 0待审核 1通过 2驳回
+     * @param audit_remark 审核意见
+     * @return 受影响行数
+     */
+    @Update("update decoration_material set audit_status=#{audit_status},audit_remark=#{audit_remark} " +
+            "where id=#{id}")
+    int audit(@Param("id") int id,
+              @Param("audit_status") int audit_status,
+              @Param("audit_remark") String audit_remark);
 }

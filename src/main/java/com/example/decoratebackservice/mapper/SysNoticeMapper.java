@@ -54,6 +54,28 @@ public interface SysNoticeMapper {
                                     @Param("show_position") Integer show_position);
 
     /**
+     * 前台公开查询：只取「已发布」的公告，可限定展示位置、是否过滤已过期、最多返回条数
+     * <p>
+     * 三个条件均可为空：show_position 为空则不限位置，limit 为空则不限制条数
+     *
+     * @param show_position 展示位置 1首页顶部 2用户中心 3后台首页
+     * @param active_only   是否只取未过期（expire_time 为 null 视为长期有效）
+     * @param limit         最大返回条数
+     */
+    @ResultMap("noticeResult")
+    @Select("<script>" +
+            "select * from sys_notice " +
+            "where is_deleted = 0 and status = 1 " +
+            "<if test='show_position != null'>and show_position = #{show_position} </if>" +
+            "<if test='active_only'>and (expire_time is null or expire_time &gt; now()) </if>" +
+            "order by publish_time desc, id desc " +
+            "<if test='limit != null'>limit #{limit}</if>" +
+            "</script>")
+    List<SysNotice> findPublished(@Param("show_position") Integer show_position,
+                                  @Param("active_only") boolean active_only,
+                                  @Param("limit") Integer limit);
+
+    /**
      * 动态更新：仅更新传入（非 null）的字段
      */
     @Update("<script>" +

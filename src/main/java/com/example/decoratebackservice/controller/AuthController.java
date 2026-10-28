@@ -6,10 +6,13 @@ import com.example.decoratebackservice.config.AdminLoginRequest;
 import com.example.decoratebackservice.config.AdminLoginResponse;
 import com.example.decoratebackservice.config.LoginRequest;
 import com.example.decoratebackservice.config.UsernameLoginRequest;
+import com.example.decoratebackservice.config.UserTypeRequest;
 import com.example.decoratebackservice.entity.Role;
 import com.example.decoratebackservice.entity.SysAdmin;
+import com.example.decoratebackservice.mapper.UserMapper;
 import com.example.decoratebackservice.security.LoginUser;
 import com.example.decoratebackservice.service.AdminLoginService;
+import com.example.decoratebackservice.service.RoleService;
 import com.example.decoratebackservice.service.UserLoginService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,11 +69,22 @@ public class AuthController {
 
     public AuthController(AuthenticationManager authenticationManager,
                           AdminLoginService adminLoginService,
-                          UserLoginService userLoginService) {
+                          UserLoginService userLoginService,
+                          RoleService roleService,
+                          UserMapper userMapper) {
         this.authenticationManager = authenticationManager;
         this.adminLoginService = adminLoginService;
         this.userLoginService = userLoginService;
+        this.roleService = roleService;
+        this.userMapper = userMapper;
     }
+
+    /**
+     * 注册页角色列表与「首次登录」身份类型回写所需的依赖
+     */
+    private final RoleService roleService;
+
+    private final UserMapper userMapper;
 
     // ==================== 通用登录 ====================
 
@@ -177,6 +191,39 @@ public class AuthController {
         saveAuthentication(authentication, httpRequest, httpResponse);
         return Result.success("登录成功", userDetails.getUsername());
     }
+
+    // ==================== 注册页 / 首次登录 ====================
+
+    @Operation(summary = "注册页可选身份类型（sys_role 全量角色）")
+    @GetMapping("/roles")
+    public Result<List<Role>> roles() {
+        // 注册页要在未登录状态下填表，因此该接口在 SecurityConfig 中放行
+        return Result.success(roleService.findAll());
+    }
+
+    @Operation(summary = "首次登录弹窗：确认当前用户的身份类型（1客户2装修爱好者3购房者4家具爱好者5其他）")
+    @PostMapping("/user-type")
+    public Result<Integer> updateUserType(@RequestBody UserTypeRequest request, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Result.unauthorized("未登录或会话已过期");
+        }
+        if (request == null || request.getUser_type() == null
+                || request.getUser_type() < USER_TYPE_MIN || request.getUser_type() > USER_TYPE_MAX) {
+            return Result.validateFailed("用户类型只能是 1客户 2装修爱好者 3购房者 4家具爱好者 5其他");
+        }
+        int rows = userMapper.updateUserType(authentication.getName(), request.getUser_type());
+        if (rows <= 0) {
+            return Result.error(404, "当前账号不是前台用户，无法设置身份类型");
+        }
+        return Result.success("身份类型已保存", rows);
+    }
+
+    /**
+     * 用户身份类型的取值区间：1客户 2装修爱好者 3购房者 4家具爱好者 5其他
+     */
+    private static final int USER_TYPE_MIN = 1;
+
+    private static final int USER_TYPE_MAX = 5;
 
     // ==================== 会话相关 ====================
 

@@ -80,6 +80,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/auth/login",
                     "/auth/register",
+                    // 注册页需要在未登录状态拉取可选身份类型
+                    "/auth/roles",
                     "/auth/login-by-account",
                     "/auth/login-by-username",
                     "/auth/admin/login",
@@ -90,6 +92,10 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/api-docs/**",
                     "/v3/api-docs/**",
+                    // 详情页评论区：未登录也要能浏览评论，否则会 401 跳登录页
+                    "/comment/list",
+                    // 公司介绍页「公司公告」与公告中心：游客可浏览已发布公告
+                    "/notice/list",
                     // 上传后的图片由浏览器直接访问，必须放行；
                     // 否则 <img src> 拿到 401，页面只显示破图
                     "/uploads/**",

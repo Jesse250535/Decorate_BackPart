@@ -44,6 +44,9 @@ public class User {
     @Schema(description = "用户类型", example = "1")
     private int user_type;
 
+    @Schema(description = "是否已确认过用户类型（首次登录弹窗）", example = "0")
+    private int user_type_chosen;
+
     @Schema(description = "角色类型", example = "2")
     private int role_id;
 

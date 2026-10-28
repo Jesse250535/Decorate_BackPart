@@ -107,12 +107,37 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
             @Result(property = "id", column = "id"),
             @Result(property = "username", column = "username"),
             @Result(property = "nickname", column = "nickname"),
+            @Result(property = "phone", column = "phone"),
+            @Result(property = "user_type", column = "user_type"),
+            @Result(property = "user_type_chosen", column = "user_type_chosen"),
             @Result(property = "role_id", column = "role_id"),
             @Result(property = "status", column = "status"),
             @Result(property = "is_deleted", column = "is_deleted")
     })
-    @Select("select id, username, nickname, role_id, status, is_deleted from sys_user where username = #{username}")
+    @Select("select id, username, nickname, phone, user_type, user_type_chosen, role_id, status, is_deleted " +
+            "from sys_user where username = #{username}")
     User findByUsernameForStaff(@Param("username") String username);
+
+    /**
+     * 首次登录弹窗选定身份类型后回写：user_type 记下所选类型，chosen 置 1 表示不再弹窗
+     *
+     * @param username  用户名
+     * @param user_type 用户身份类型 1客户 2装修爱好者 3购房者 4家具爱好者 5其他
+     * @return 受影响行数
+     */
+    @Update("update sys_user set user_type = #{user_type}, user_type_chosen = 1 where username = #{username}")
+    int updateUserType(@Param("username") String username, @Param("user_type") int user_type);
+
+    /**
+     * 只标记「用户类型已确认」，不改 user_type。
+     * <p>
+     * 库管 / 施工人员注册时用：岗位身份已由角色说明，不需要首次登录弹窗。
+     *
+     * @param username 用户名
+     * @return 受影响行数
+     */
+    @Update("update sys_user set user_type_chosen = 1 where username = #{username}")
+    int markUserTypeChosen(@Param("username") String username);
 
     /**
      * 用Data对象来作为传参,这样语句中的#{id}、#{ip}等数据就分别对应Data对象中的id和ip等属性。

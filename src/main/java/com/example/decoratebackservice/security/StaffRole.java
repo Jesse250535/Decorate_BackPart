@@ -24,6 +24,31 @@ public final class StaffRole {
     public static final String STOCK = "ROLE_STOCK";
 
     /**
+     * 装修方案提供商角色标识（sys_role.id = 2）
+     */
+    public static final String PLAN_PROVIDER = "ROLE_PLAN_PROVIDER";
+
+    /**
+     * 材料供应商角色标识（sys_role.id = 3）
+     */
+    public static final String SUPPLIER = "ROLE_SUPPLIER";
+
+    /**
+     * 设计师角色标识（sys_role.id = 6）
+     */
+    public static final String DESIGNER = "ROLE_DESIGNER";
+
+    /**
+     * 项目经理角色标识（sys_role.id = 7）
+     */
+    public static final String MANAGER = "ROLE_MANAGER";
+
+    /**
+     * 财务人员角色标识（sys_role.id = 8）
+     */
+    public static final String FINANCE = "ROLE_FINANCE_STAFF";
+
+    /**
      * 施工人员角色标识（sys_role.id = 5）
      */
     public static final String WORKER = "ROLE_WORKER";
@@ -59,6 +84,41 @@ public final class StaffRole {
      */
     public static boolean isWorker(Authentication authentication) {
         return has(authentication, WORKER);
+    }
+
+    /**
+     * 是否装修方案提供商
+     */
+    public static boolean isPlanProvider(Authentication authentication) {
+        return has(authentication, PLAN_PROVIDER);
+    }
+
+    /**
+     * 是否材料供应商
+     */
+    public static boolean isSupplier(Authentication authentication) {
+        return has(authentication, SUPPLIER);
+    }
+
+    /**
+     * 是否设计师
+     */
+    public static boolean isDesigner(Authentication authentication) {
+        return has(authentication, DESIGNER);
+    }
+
+    /**
+     * 是否项目经理
+     */
+    public static boolean isManager(Authentication authentication) {
+        return has(authentication, MANAGER);
+    }
+
+    /**
+     * 是否财务人员
+     */
+    public static boolean isFinance(Authentication authentication) {
+        return has(authentication, FINANCE);
     }
 
     /**

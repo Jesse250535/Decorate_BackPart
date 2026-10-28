@@ -103,4 +103,58 @@ public interface DecorationOrderMapper {
     int updateOrderStatusByOrderNo(@Param("order_no") String order_no,
                                    @Param("order_status") int order_status);
 
+    /**
+     * 支付：只允许把「自己的、待支付」订单置为已支付，并写入支付时间。
+     * <p>
+     * 条件里带上 user_id 与 order_status=0，避免用别人的订单号支付或者重复支付；
+     * 受影响行数为 0 即代表订单不存在 / 不是本人 / 已不是待支付状态。
+     *
+     * @param order_no     订单编号
+     * @param user_id      下单用户ID
+     * @param order_status 目标订单状态（传 1 已支付）
+     * @param pay_time     支付时间
+     * @return 受影响行数
+     */
+    @Update("update decoration_order set order_status=#{order_status},pay_time=#{pay_time} " +
+            "where order_no=#{order_no} and user_id=#{user_id} and order_status=0 and is_deleted=0")
+    int payByOrderNo(@Param("order_no") String order_no,
+                     @Param("user_id") int user_id,
+                     @Param("order_status") int order_status,
+                     @Param("pay_time") LocalDateTime pay_time);
+
+    /**
+     * 按订单编号查询（financial 核对金额前先确认合同存在）
+     *
+     * @param order_no 订单编号
+     * @return 订单
+     */
+    @ResultMap("orderResult")
+    @Select("select * from decoration_order where order_no = #{order_no} and is_deleted = 0")
+    DecorationOrder findByOrderNo(@Param("order_no") String order_no);
+
+    /**
+     * 财务核对合同金额：只改 total_amount，不动订单状态与其它字段
+     * <p>
+     * 复用 update 会受 {@code <if test='order_status != 0'>} 之类条件影响，
+     * 这里用专用语句，保证「只改金额」这个动作不会误伤订单状态。
+     *
+     * @param order_no     订单（合同）编号
+     * @param total_amount 核对后的合同金额
+     * @return 受影响行数
+     */
+    @Update("update decoration_order set total_amount=#{total_amount} where order_no=#{order_no} and is_deleted=0")
+    int updateAmountByOrderNo(@Param("order_no") String order_no,
+                              @Param("total_amount") java.math.BigDecimal total_amount);
+
+    /**
+     * 查询指定合同状态的订单（项目经理看已签订项目、财务看全部合同）
+     *
+     * @param contract_status 合同状态 0未签订 1已签订
+     * @return 订单列表
+     */
+    @ResultMap("orderResult")
+    @Select("select * from decoration_order where contract_status=#{contract_status} and is_deleted=0 " +
+            "order by id desc")
+    List<DecorationOrder> findByContractStatus(@Param("contract_status") int contract_status);
+
 }

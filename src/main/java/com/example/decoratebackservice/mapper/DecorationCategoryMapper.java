@@ -1,16 +1,24 @@
 package com.example.decoratebackservice.mapper;
 
 import com.example.decoratebackservice.entity.DecorationCategory;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
+import org.apache.ibatis.annotations.ResultMap;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
 /**
- * 分类标签 Mapper（新增，仅供下拉选项使用）
+ * 分类标签 Mapper
+ * <p>
+ * 原本只提供下拉选项查询，库管页面需要管理分类后补充了增删改查。
+ * 删除走逻辑删除（is_deleted = 1），因为 decoration_material / decoration_plan
+ * 对 category_id 都有 ON DELETE RESTRICT 外键，物理删除必然失败。
  */
 @Mapper
 public interface DecorationCategoryMapper {
@@ -37,4 +45,31 @@ public interface DecorationCategoryMapper {
     @Select("select * from decoration_category where category_type = #{category_type} " +
             "and is_deleted = 0 order by sort asc, id asc")
     List<DecorationCategory> findByType(@Param("category_type") int category_type);
+
+    /**
+     * 全部分类（含两种类型、含已逻辑删除），供管理页筛选展示
+     */
+    @ResultMap("categoryResult")
+    @Select("select * from decoration_category order by category_type asc, sort asc, id asc")
+    List<DecorationCategory> findAll();
+
+    @ResultMap("categoryResult")
+    @Select("select * from decoration_category where id = #{id}")
+    DecorationCategory findById(@Param("id") int id);
+
+    /**
+     * 新增分类。create_time / is_deleted 交给数据库默认值，避免时间与时区问题
+     */
+    @Insert("insert into decoration_category(category_name, category_type, parent_id, `sort`, is_hot) " +
+            "values(#{category_name}, #{category_type}, #{parent_id}, #{sort}, #{is_hot})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(DecorationCategory category);
+
+    @Update("update decoration_category set category_name = #{category_name}, " +
+            "category_type = #{category_type}, parent_id = #{parent_id}, " +
+            "`sort` = #{sort}, is_hot = #{is_hot} where id = #{id}")
+    int update(DecorationCategory category);
+
+    @Update("update decoration_category set is_deleted = 1 where id = #{id}")
+    int softDelete(@Param("id") int id);
 }

@@ -1,6 +1,7 @@
 package com.example.decoratebackservice.controller;
 
 import com.example.decoratebackservice.common.Result;
+import com.example.decoratebackservice.config.CommentRequest;
 import com.example.decoratebackservice.entity.DecorationComment;
 import com.example.decoratebackservice.service.DecorationCommentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 评论管理接口
@@ -101,6 +103,68 @@ public class DecorationCommentController {
             return Result.error(403, "删除失败：评论不存在或不属于你");
         }
         return Result.success("删除成功", rows);
+    }
+
+    /* ==================== 详情页评论区（方案 / 材料） ==================== */
+
+    /**
+     * 评论列表：主评论 + 回复，并标记当前登录用户是否点过赞。
+     * <p>
+     * 该接口在 SecurityConfig 中放行，未登录也能浏览评论，
+     * 此时 liked 恒为 false。
+     */
+    @Operation(summary = "查询某个方案/材料下的评论与回复")
+    @GetMapping("/list")
+    public Result<List<DecorationComment>> list(@RequestParam("target_type") int targetType,
+                                                @RequestParam("target_id") int targetId,
+                                                Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        return Result.success(decorationCommentService.listByTarget(targetType, targetId, userId));
+    }
+
+    @Operation(summary = "发表评论 / 回复（登录后）")
+    @PostMapping("/publish")
+    public Result<DecorationComment> publish(@RequestBody CommentRequest body,
+                                             Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录后再发表评价");
+        }
+        if (body == null || body.getTarget_type() == null || body.getTarget_id() == null) {
+            return Result.validateFailed("缺少评论对象");
+        }
+        String content = body.getContent();
+        if (content == null || content.isBlank()) {
+            return Result.validateFailed("评论内容不能为空");
+        }
+        if (content.trim().length() > DecorationCommentService.MAX_CONTENT_LENGTH) {
+            return Result.validateFailed("评论内容不能超过 " + DecorationCommentService.MAX_CONTENT_LENGTH + " 字");
+        }
+        int parentId = body.getParent_id() == null ? 0 : body.getParent_id();
+        DecorationComment saved = decorationCommentService.publish(
+                userId, body.getTarget_type(), body.getTarget_id(), parentId, content);
+        if (saved == null) {
+            return Result.error(400, "发表失败：评论对象不存在，或要回复的评论已被删除");
+        }
+        return Result.success(parentId > 0 ? "回复成功" : "评价发表成功", saved);
+    }
+
+    /**
+     * 点赞 / 取消点赞（同一个接口按当前状态切换）
+     */
+    @Operation(summary = "点赞或取消点赞某条评论")
+    @PostMapping("/{id}/like")
+    public Result<Map<String, Object>> toggleLike(@PathVariable int id, Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录后再点赞");
+        }
+        Map<String, Object> data = decorationCommentService.toggleCommentLike(userId, id);
+        if (data == null) {
+            return Result.error(404, "评论不存在或已被删除");
+        }
+        boolean liked = Boolean.TRUE.equals(data.get("liked"));
+        return Result.success(liked ? "点赞成功" : "已取消点赞", data);
     }
 
     /**

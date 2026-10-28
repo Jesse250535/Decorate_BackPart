@@ -46,6 +46,26 @@ public class SysNoticeService {
         return sysNoticeMapper.findByCondition(status, show_position);
     }
 
+    /**
+     * 前台公开公告列表（公司公告 / 公告中心）
+     * <p>
+     * 只返回已发布（status=1）且未逻辑删除的公告；
+     * activeOnly 为 true 时额外过滤掉已过 expire_time 的公告；
+     * limit 为空表示不限制条数，非法值（<=0）按 1 条处理，超过 100 按 100 截断。
+     *
+     * @param show_position 展示位置，可为空
+     * @param activeOnly    是否只取未过期公告
+     * @param limit         最多返回条数，可为空
+     * @return 公告列表，按发布时间倒序
+     */
+    public List<SysNotice> listPublished(Integer show_position, Boolean activeOnly, Integer limit) {
+        Integer safeLimit = null;
+        if (limit != null) {
+            safeLimit = Math.max(1, Math.min(limit, 100));
+        }
+        return sysNoticeMapper.findPublished(show_position, Boolean.TRUE.equals(activeOnly), safeLimit);
+    }
+
     public int update(SysNotice notice) {
         return sysNoticeMapper.update(notice);
     }
