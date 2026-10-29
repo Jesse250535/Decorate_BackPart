@@ -55,10 +55,10 @@ public class DecorationMaterialService {
     }
 
     /**
-     * 逻辑删除材料（保留库存流水）
+     * 逻辑删除材料（保留历史关联数据）
      * <p>
      * 与物理 delete 并存：物理删除仍给既有调用方使用，库管页面走逻辑删除，
-     * 避免 material_stock_record 的外键约束导致删除失败
+     * 避免历史订单 / 点赞收藏等按材料 id 关联的数据失去指向
      */
     public int softDelete(int id) {
         return decorationMaterialMapper.softDelete(id);

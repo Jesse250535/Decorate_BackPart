@@ -12,9 +12,12 @@ import org.springframework.security.core.GrantedAuthority;
  * <p>
  * 角色取值来源 sys_role 表：
  * <ul>
- *     <li>4 库管人员 → ROLE_STOCK</li>
- *     <li>5 施工人员 → ROLE_WORKER</li>
+ *     <li>1 普通用户 → ROLE_USER</li>
+ *     <li>2 设计师 → ROLE_DESIGNER（囊括原装修方案提供商职能）</li>
+ *     <li>3 项目经理 → ROLE_MANAGER</li>
  * </ul>
+ * 历史岗位角色（ROLE_STOCK / ROLE_WORKER / ROLE_SUPPLIER / ROLE_FINANCE_STAFF）常量保留，
+ * 用于兼容旧数据，不再作为新注册的可选项。
  */
 public final class StaffRole {
 
@@ -87,10 +90,14 @@ public final class StaffRole {
     }
 
     /**
-     * 是否装修方案提供商
+     * 是否可上传 / 维护装修方案。
+     * <p>
+     * 设计师已囊括装修方案提供商（ROLE_PLAN_PROVIDER）的全部职能，因此这里把
+     * ROLE_DESIGNER 也视为方案提供方；否则设计师登录后调用 /plan-portal/* 会被拒。
+     * 方案上传后仍是「待审核」状态，审核入口见 {@link #isDesigner}。
      */
     public static boolean isPlanProvider(Authentication authentication) {
-        return has(authentication, PLAN_PROVIDER);
+        return has(authentication, PLAN_PROVIDER) || has(authentication, DESIGNER);
     }
 
     /**

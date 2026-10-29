@@ -99,10 +99,9 @@ public interface DecorationMaterialMapper {
     /**
      * 逻辑删除材料（把 is_deleted 置 1）。
      * <p>
-     * 为什么不用上面的物理 delete：material_stock_record 有外键
-     * {@code fk_stock_material ... ON DELETE RESTRICT}，只要该材料有入库/出库流水，
-     * 物理删除就会抛 SQLIntegrityConstraintViolationException。
-     * 逻辑删除既能保住历史流水，也不影响仍在使用物理删除的其它调用方。
+     * 为什么不用物理 delete：历史订单的 target_id、点赞收藏等记录都按材料 id 关联，
+     * 物理删除会让这些数据失去指向。逻辑删除既能保住历史数据，
+     * 也不影响仍在使用物理删除的其它调用方。
      *
      * @param id 材料ID
      * @return 受影响行数

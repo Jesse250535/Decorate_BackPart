@@ -189,8 +189,8 @@ public class StockController {
         if (materialService.findById(id) == null) {
             return Result.error(404, "材料不存在");
         }
-        // 用逻辑删除而不是物理删除：material_stock_record 的外键是 ON DELETE RESTRICT，
-        // 有流水记录的材料一旦物理删除就会直接抛数据库异常
+        // 用逻辑删除而不是物理删除：历史订单的 target_id、点赞收藏等数据都按材料 id 关联，
+        // 物理删除会让这些历史记录失去指向
         return Result.success("删除成功", materialService.softDelete(id));
     }
 

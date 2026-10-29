@@ -25,12 +25,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 装修方案提供商工作台：上传 / 修改自己的方案。
+ * 装修方案工作台：上传 / 修改自己的方案。
  * <p>
- * 方案上传后为「待审核」，由设计师审核（见 {@link PlanAuditController}），
- * 审核通过才允许上架展示，供应商自己无法直接让方案出现在商城。
+ * 准入身份由 {@link StaffRole#isPlanProvider} 判定：ROLE_PLAN_PROVIDER 与
+ * ROLE_DESIGNER 都放行（设计师已囊括装修方案提供商职能）。
+ * <p>
+ * 方案上传后为「待审核」，由设计师审核（见 {@link AuditController}），
+ * 审核通过才允许上架展示，上传方自己无法直接让方案出现在商城。
  */
-@Tag(name = "装修方案提供商-方案上传接口")
+@Tag(name = "设计师/装修方案提供商-方案上传接口")
 @RestController
 @RequestMapping("/plan-portal")
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -65,7 +68,7 @@ public class PlanPortalController {
     @GetMapping("/options")
     public Result<Map<String, Object>> options(Authentication authentication) {
         if (!StaffRole.isPlanProvider(authentication)) {
-            return Result.forbidden("仅装修方案提供商可上传方案");
+            return Result.forbidden("仅设计师 / 装修方案提供商可上传方案");
         }
         List<DecorationCategory> categories = categoryMapper.findByType(CATEGORY_TYPE_PLAN);
         Map<String, Object> data = new LinkedHashMap<>();
@@ -78,7 +81,7 @@ public class PlanPortalController {
     public Result<List<DecorationPlan>> plans(Authentication authentication) {
         User user = currentUser(authentication);
         if (user == null) {
-            return Result.forbidden("仅装修方案提供商可上传方案");
+            return Result.forbidden("仅设计师 / 装修方案提供商可上传方案");
         }
         return Result.success(planMapper.findByCreateUserId(user.getId()));
     }
@@ -88,7 +91,7 @@ public class PlanPortalController {
     public Result<Integer> insert(@RequestBody DecorationPlan plan, Authentication authentication) {
         User user = currentUser(authentication);
         if (user == null) {
-            return Result.forbidden("仅装修方案提供商可上传方案");
+            return Result.forbidden("仅设计师 / 装修方案提供商可上传方案");
         }
         String error = validate(plan);
         if (error != null) {
@@ -111,7 +114,7 @@ public class PlanPortalController {
     public Result<Integer> update(@RequestBody DecorationPlan plan, Authentication authentication) {
         User user = currentUser(authentication);
         if (user == null) {
-            return Result.forbidden("仅装修方案提供商可上传方案");
+            return Result.forbidden("仅设计师 / 装修方案提供商可上传方案");
         }
         if (plan.getId() <= 0) {
             return Result.error(400, "缺少方案ID");
