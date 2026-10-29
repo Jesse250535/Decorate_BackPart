@@ -19,22 +19,16 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ============================================================
 INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `permissions`, `remark`) VALUES
 (1, '普通用户',     'ROLE_USER',          'plan:view,material:view,comment:write,order:operate', '前台普通注册用户'),
-(2, '装修方案提供者', 'ROLE_PLAN_PROVIDER', 'plan:upload,plan:view,my:resource',                   '可上传装修方案'),
-(3, '材料供应商',   'ROLE_SUPPLIER',      'material:upload,material:view,my:resource',           '可上传装修材料'),
-(4, '库管人员',     'ROLE_STOCK',         'stock:operate,stock:view',                            '负责材料出入库'),
-(5, '施工人员',     'ROLE_WORKER',        'progress:report,progress:view',                       '负责施工进度上报'),
-(6, '设计师',       'ROLE_DESIGNER',      'plan:audit,plan:view',                                '负责方案审核'),
-(7, '项目经理',     'ROLE_MANAGER',       'progress:audit,order:view,contract:manage',           '负责合同与进度审核'),
-(8, '财务人员',     'ROLE_FINANCE_STAFF', 'order:view,stat:view,contract:amount',                '负责合同金额与对账');
+(2, '设计师',       'ROLE_DESIGNER',      'plan:audit,plan:view',                                '负责方案审核'),
+(3, '项目经理',     'ROLE_MANAGER',       'progress:audit,order:view,contract:manage',           '负责合同与进度审核'),
+
 
 -- ============================================================
 -- 2. 后台管理员角色（/auth/admin/login 从 sys_adminrole 读权限）
 -- ============================================================
 INSERT INTO `sys_adminrole` (`id`, `role_name`, `role_code`, `permissions`, `remark`) VALUES
 (6, '管理员',     'ROLE_ADMIN',     '*',                                        '系统最高权限管理员'),
-(7, '运营管理员', 'ROLE_OPERATION', 'user:manage,material:audit,plan:audit',     '负责用户与内容运营'),
-(8, '财务管理员', 'ROLE_FINANCE',   'order:manage,refund:audit,stat:view',       '负责订单与财务'),
-(9, '客服管理员', 'ROLE_CS',        'feedback:handle,comment:manage,notice:manage', '负责反馈与评论处理');
+
 
 -- ============================================================
 -- 3. 前台用户（覆盖 1~8 号角色，密码统一 123456）
@@ -43,13 +37,9 @@ INSERT INTO `sys_adminrole` (`id`, `role_name`, `role_code`, `permissions`, `rem
 INSERT INTO `sys_user`
 (`id`, `username`, `phone`, `email`, `password`, `nickname`, `gender`, `user_type`, `user_type_chosen`, `role_id`, `profile`) VALUES
 (1, 'test01',     '13800000001', 'test01@example.com',     '123456', '小张',       1, 1, 0, 1, '普通客户，喜欢现代简约风'),
-(2, 'planprov01', '13800000002', 'planprov01@example.com', '123456', '方案商老李', 1, 2, 1, 2, '可上传装修方案'),
-(3, 'supplier01', '13800000003', 'supplier01@example.com', '123456', '供应商老王', 1, 3, 1, 3, '经营建材供应'),
-(4, 'stock01',    '13800000004', 'stock01@example.com',    '123456', '库管小刘',   2, 1, 1, 4, '负责材料出入库'),
-(5, 'worker01',   '13800000005', 'worker01@example.com',   '123456', '施工小陈',   1, 1, 1, 5, '负责现场施工与进度上报'),
 (6, 'designer01', '13800000006', 'designer01@example.com', '123456', '设计师小林', 2, 1, 1, 6, '负责方案审核'),
 (7, 'manager01',  '13800000007', 'manager01@example.com',  '123456', '项目经理老赵', 1, 1, 1, 7, '负责合同与进度审核'),
-(8, 'finance01',  '13800000008', 'finance01@example.com',  '123456', '财务小周',   2, 1, 1, 8, '负责合同金额与对账');
+
 
 -- ============================================================
 -- 4. 后台管理员（role_id → sys_adminrole.id；不写 user_type 生成列）
