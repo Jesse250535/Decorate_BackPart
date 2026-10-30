@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * 管理员认证信息加载服务，查询 sys_admin 并装配角色权限
+ * 管理员认证信息加载服务，查询管理员账号（sys_user 中 is_admin=1）并装配角色权限
  */
 @Service
 public class AdminUserDetailsService implements UserDetailsService {
@@ -38,12 +38,12 @@ public class AdminUserDetailsService implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 优先按管理员账号（sys_admin）认证
+        // 优先按管理员账号（sys_user 中 is_admin=1）认证
         SysAdmin admin = sysAdminService.findByUsername(username);
         if (admin != null) {
             return new LoginUser(admin, buildAuthorities(admin.getRole_id()));
         }
-        // 管理表中不存在时，回退到普通用户账号（sys_user），支持以 username 登录
+        // 管理员账号不存在时，回退到普通用户账号（sys_user 中 is_admin=0），支持以 username 登录
         User user = userService.findByUsername(username);
         if (user != null) {
             return new org.springframework.security.core.userdetails.User(

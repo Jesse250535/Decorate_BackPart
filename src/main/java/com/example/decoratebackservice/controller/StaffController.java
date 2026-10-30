@@ -61,7 +61,7 @@ public class StaffController {
 
         User user = userService.findByUsernameForStaff(username);
         if (user == null) {
-            // 管理员账号存放在 sys_admin，不在 sys_user 中；返回空角色信息即可
+            // 管理员账号 is_admin=1，不在前台用户（is_admin=0）查询结果中；返回空角色信息即可
             vo.setRole_code("");
             vo.setRole_name("");
             vo.setPermissions(Collections.emptyList());

@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 
 /**
- * 登录用户信息，封装 sys_admin 账号与角色权限
+ * 登录用户信息，封装管理员账号（sys_user 中 is_admin=1）与角色权限
  */
 public class LoginUser implements UserDetails {
 

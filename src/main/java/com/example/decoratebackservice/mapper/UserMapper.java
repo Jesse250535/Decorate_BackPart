@@ -86,10 +86,10 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
             @Result(property = "is_deleted", column = "is_deleted")
 
     })
-    @Select("select * from sys_user where id = #{id}")
+    @Select("select * from sys_user where id = #{id} and is_admin = 0")
     User findById(@Param("id") int id);
 
-    @Select("select * from sys_user where username = #{username}")
+    @Select("select * from sys_user where username = #{username} and is_admin = 0")
     User findByUsername(@Param("username") String username);
 
     /**
@@ -115,7 +115,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
             @Result(property = "is_deleted", column = "is_deleted")
     })
     @Select("select id, username, nickname, phone, user_type, user_type_chosen, role_id, status, is_deleted " +
-            "from sys_user where username = #{username}")
+            "from sys_user where username = #{username} and is_admin = 0")
     User findByUsernameForStaff(@Param("username") String username);
 
     /**
@@ -125,7 +125,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      * @param user_type 用户身份类型 1客户 2装修爱好者 3购房者 4家具爱好者 5其他
      * @return 受影响行数
      */
-    @Update("update sys_user set user_type = #{user_type}, user_type_chosen = 1 where username = #{username}")
+    @Update("update sys_user set user_type = #{user_type}, user_type_chosen = 1 where username = #{username} and is_admin = 0")
     int updateUserType(@Param("username") String username, @Param("user_type") int user_type);
 
     /**
@@ -136,7 +136,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      * @param username 用户名
      * @return 受影响行数
      */
-    @Update("update sys_user set user_type_chosen = 1 where username = #{username}")
+    @Update("update sys_user set user_type_chosen = 1 where username = #{username} and is_admin = 0")
     int markUserTypeChosen(@Param("username") String username);
 
     /**
@@ -144,7 +144,7 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      *
      * @param user
      */
-    @Update("update sys_user set username=#{username},phone=#{phone},password=#{password},avatar=#{avatar},nickname=#{nickname},gender=#{gender},user_type=#{user_type},role_id=#{role_id},profile=#{profile},violation_count=#{violation_count},status=#{status},is_deleted=#{is_deleted} where id=#{id}")
+    @Update("update sys_user set username=#{username},phone=#{phone},password=#{password},avatar=#{avatar},nickname=#{nickname},gender=#{gender},user_type=#{user_type},role_id=#{role_id},profile=#{profile},violation_count=#{violation_count},status=#{status},is_deleted=#{is_deleted} where id=#{id} and is_admin = 0")
     void update(User user);
 
     /**
@@ -152,16 +152,16 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
      *
      * @param id
      */
-    @Delete("delete from sys_user where id =#{id}")
+    @Delete("delete from sys_user where id =#{id} and is_admin = 0")
     void delete(int id);
 
-    @Select("select * from sys_user")
+    @Select("select * from sys_user where is_admin = 0")
     List<User> findAll();
 
-    @Delete("delete from sys_user where username = #{username}")
+    @Delete("delete from sys_user where username = #{username} and is_admin = 0")
     void deleteByUsername(@Param("username") String username);
 
-    @Select("select username from sys_user where id = #{id}")
+    @Select("select username from sys_user where id = #{id} and is_admin = 0")
     String findUsernameById(@Param("id") int id);
 
 }

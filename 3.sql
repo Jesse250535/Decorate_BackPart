@@ -1,28 +1,28 @@
 /*
- 装饰公司系统建表脚本（已合并设计师升级结构）
+ 装饰公司系统建表脚本
 
  Source Server Type    : MySQL
  Target Server Version : 80044 (8.0.44)
  File Encoding         : 65001
- 日期：2026-10-29
+ 日期：2026-10-30
 
  说明：
- 1. 本文件 = 旧 3.sql 基础结构 + 5_designer_upgrade.sql 的新增表/新增字段 + 6_design_flow.sql
-    的设计服务全流程 6 张新表，已合并为单一建表脚本。
-    新库只需执行：3.sql → 4_seed_data.sql（无需再执行 5_designer_upgrade.sql / 6_design_flow.sql）。
- 2. 已移除 material_stock_record（材料出入库流水表）：平台不再记录材料数量流水，
-    材料库存仅保留 decoration_material.stock 作为商品展示字段。
- 3. 角色收敛为 3 类前台角色 + 1 类后台管理员：
-      ROLE_USER 普通用户 / ROLE_DESIGNER 设计师（囊括原方案提供商）/ ROLE_MANAGER 项目经理
+ 1. 本文件为合并后的单一建表脚本（21 张表），新库只需执行：3.sql → 4_seed_data.sql。
+ 2. 角色收敛为 3 类前台角色 + 1 类后台管理员：
+      ROLE_USER 普通用户 / ROLE_DESIGNER 设计师 / ROLE_MANAGER 项目经理 / ROLE_ADMIN 管理员
     权限判断依据是 role_code，不依赖 id。
- 4. 合并新增内容：
-    decoration_plan   + designer_id / design_fee / measure_first
-    decoration_order  + designer_id / manager_id / payment_type / paid_amount /
-                        payment_status / need_measure / measure_status / source_scene
-    新表 designer_profile / design_drawing / decoration_contract / order_payment /
-         measure_record / chat_conversation / chat_message
-    设计服务流程 6 张新表：design_service_order / design_quote / design_quote_item /
-         design_contract / construction_stage / construction_payment_node
+ 3. 施工进度统一由 construction_stage（绑定 design_service_order）管理，
+    已移除旧的 decoration_progress（绑定商城订单的装修进度表）。
+ 4. 量房、效果图、平面设计图功能已整合进 design_service_order
+    （measure_date / plan_drawings / effect_drawings 字段），
+    移除独立的设计图纸表 design_drawing 与量房记录表 measure_record。
+ 5. 设计师展示信息整合到 sys_user（头像 avatar / 简介 profile），
+    移除设计师档案表 designer_profile；验证码走内存实现，移除 email_verification_code 表。
+ 6. 移除 Java 后端未使用的冗余字段（部分 create_time / update_time 审计字段、
+    decoration_order 的量房 / 下单入口等字段）。
+ 7. order_payment 付款计划表已合并进 decoration_order 主表，
+    order_payment 表已删除；材料订单默认全款（payment_type=5），
+    尾款金额与尾款施工项目分别用 tail_amount / tail_items 记录。
     */
 create database decoration_company_system;
 use decoration_company_system;
@@ -40,30 +40,13 @@ CREATE TABLE `sys_role`  (
   `role_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色标识',
   `permissions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '权限标识集合',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '角色备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_role_code`(`role_code` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台角色权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for sys_adminrole（后台管理员角色权限表）
--- ----------------------------
-DROP TABLE IF EXISTS `sys_adminrole`;
-CREATE TABLE `sys_adminrole`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `role_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
-  `role_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色标识',
-  `permissions` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '权限标识集合',
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '角色备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_adminrole_code`(`role_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员角色权限表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for sys_user（前台用户表，含设计师 / 项目经理）
+-- Table structure for sys_user（用户表：前台用户 + 后台管理员，is_admin 区分）
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user`;
 CREATE TABLE `sys_user`  (
@@ -78,6 +61,7 @@ CREATE TABLE `sys_user`  (
   `user_type` tinyint NOT NULL DEFAULT 1 COMMENT '用户身份类型 1客户2装修爱好者3购房者4家具爱好者5其他，仅允许1-5',
   `user_type_chosen` tinyint NOT NULL DEFAULT 0,
   `role_id` bigint NOT NULL COMMENT '关联角色ID',
+  `is_admin` tinyint NOT NULL DEFAULT 0 COMMENT '是否后台管理员 0否1是',
   `profile` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '个人简介',
   `violation_count` int NOT NULL DEFAULT 0 COMMENT '违规次数',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '账号状态 0正常1封禁',
@@ -90,34 +74,7 @@ CREATE TABLE `sys_user`  (
   INDEX `idx_role_id`(`role_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `chk_sys_user_user_type` CHECK (`user_type` between 1 and 5)
-) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台用户表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for sys_admin（后台管理员表）
--- ----------------------------
-DROP TABLE IF EXISTS `sys_admin`;
-CREATE TABLE `sys_admin`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '用户名',
-  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
-  `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '加密密码',
-  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像地址',
-  `nickname` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '昵称',
-  `gender` tinyint NOT NULL DEFAULT 0 COMMENT '性别 0未知1男2女',
-  `user_type` tinyint GENERATED ALWAYS AS (`role_id`) STORED COMMENT '用户身份类型，自动等于role_id' NOT NULL,
-  `role_id` bigint NOT NULL COMMENT '关联角色ID',
-  `profile` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '个人简介',
-  `violation_count` int NOT NULL DEFAULT 0 COMMENT '违规次数',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '账号状态 0正常1封禁',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_username`(`username` ASC) USING BTREE,
-  UNIQUE INDEX `uk_phone`(`phone` ASC) USING BTREE,
-  INDEX `idx_role_id`(`role_id` ASC) USING BTREE,
-  CONSTRAINT `sys_admin_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `sys_adminrole` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表（前台用户 + 后台管理员）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for supplier（材料供应商档案）
@@ -131,7 +88,6 @@ CREATE TABLE `supplier`  (
   `address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商地址',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注信息',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '合作状态 0停用1正常合作',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '材料供应商表' ROW_FORMAT = DYNAMIC;
@@ -153,33 +109,6 @@ CREATE TABLE `decoration_category`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '分类标签表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for designer_profile（设计师档案表）
---   囊括原「装修方案提供商」的展示信息；is_accept_measure=1 表示支持先量房后选方案
--- ----------------------------
-DROP TABLE IF EXISTS `designer_profile`;
-CREATE TABLE `designer_profile`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `user_id` bigint NOT NULL COMMENT '设计师账号 sys_user.id（角色 ROLE_DESIGNER）',
-  `real_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '设计师姓名',
-  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
-  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '联系电话',
-  `city` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '服务城市',
-  `style_tags` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '擅长风格，逗号分隔',
-  `years_exp` int NOT NULL DEFAULT 0 COMMENT '从业年限',
-  `design_fee` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT '设计费（元/平米）',
-  `rating` decimal(2, 1) NOT NULL DEFAULT 5.0 COMMENT '评分',
-  `order_count` int NOT NULL DEFAULT 0 COMMENT '成交订单数',
-  `is_accept_measure` tinyint NOT NULL DEFAULT 1 COMMENT '是否支持先量房后选方案 0否1是',
-  `intro` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '设计理念/简介',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 0停用1启用',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_designer_user`(`user_id` ASC) USING BTREE,
-  CONSTRAINT `fk_designer_profile_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设计师档案表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
 -- Table structure for decoration_plan（装修方案表，绑定设计师）
 -- ----------------------------
 DROP TABLE IF EXISTS `decoration_plan`;
@@ -195,53 +124,21 @@ CREATE TABLE `decoration_plan`  (
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '方案详细描述',
   `category_id` bigint NOT NULL COMMENT '关联分类ID',
   `create_user_id` bigint NOT NULL COMMENT '上传者用户ID',
-  `designer_id` bigint NULL DEFAULT NULL COMMENT '方案所属设计师（sys_user.id，role_code=ROLE_DESIGNER）',
-  `design_fee` decimal(10, 2) NULL DEFAULT 0.00 COMMENT '设计费（元/平米），效果图与平面设计图单独计费',
-  `measure_first` tinyint NOT NULL DEFAULT 0 COMMENT '是否支持先量房后选方案 0否1是',
   `audit_status` tinyint NOT NULL DEFAULT 0 COMMENT '审核状态 0待审核1通过2驳回',
   `audit_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '审核驳回原因',
   `sales_count` int NOT NULL DEFAULT 0 COMMENT '购买销量',
   `view_count` int NOT NULL DEFAULT 0 COMMENT '浏览次数',
   `collect_count` int NOT NULL DEFAULT 0 COMMENT '收藏次数',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '上架状态 0下架1上架',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_plan_name`(`plan_name` ASC) USING BTREE,
   INDEX `idx_category_id`(`category_id` ASC) USING BTREE,
   INDEX `idx_create_user`(`create_user_id` ASC) USING BTREE,
-  INDEX `idx_plan_designer`(`designer_id` ASC) USING BTREE,
   INDEX `idx_audit_status`(`audit_status` ASC) USING BTREE,
   CONSTRAINT `fk_plan_category` FOREIGN KEY (`category_id`) REFERENCES `decoration_category` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_plan_user` FOREIGN KEY (`create_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修方案表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for design_drawing（设计图纸表：效果图 / 平面设计图）
---   plan_id 可空：按设计师下单、尚未选方案时也能先出图
--- ----------------------------
-DROP TABLE IF EXISTS `design_drawing`;
-CREATE TABLE `design_drawing`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `plan_id` bigint NULL DEFAULT NULL COMMENT '所属方案ID（可空，按设计师下单时先出图）',
-  `designer_id` bigint NOT NULL COMMENT '设计师 sys_user.id',
-  `order_id` bigint NULL DEFAULT NULL COMMENT '关联订单ID（可空）',
-  `drawing_type` tinyint NOT NULL COMMENT '图纸类型 1效果图 2平面设计图 3施工图',
-  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图纸名称',
-  `room` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '空间/房间，如客厅、主卧',
-  `image_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '图片地址',
-  `sort` int NOT NULL DEFAULT 0 COMMENT '排序',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 0隐藏1展示',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_drawing_plan`(`plan_id` ASC) USING BTREE,
-  INDEX `idx_drawing_designer`(`designer_id` ASC) USING BTREE,
-  INDEX `idx_drawing_order`(`order_id` ASC) USING BTREE,
-  CONSTRAINT `fk_drawing_plan` FOREIGN KEY (`plan_id`) REFERENCES `decoration_plan` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `fk_drawing_designer` FOREIGN KEY (`designer_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设计图纸表（效果图/平面设计图）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for decoration_material（装修材料表）
@@ -266,8 +163,6 @@ CREATE TABLE `decoration_material`  (
   `audit_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '审核驳回原因',
   `sales_count` int NOT NULL DEFAULT 0 COMMENT '销量',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '上架状态 0下架1上架',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_material_name`(`material_name` ASC) USING BTREE,
@@ -280,9 +175,7 @@ CREATE TABLE `decoration_material`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修材料表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- Table structure for decoration_order（订单主表，含设计师/项目经理/付款与量房状态）
---   source_scene 1=按方案下单（先选方案后量房） 2=按设计师下单（先量房后选方案）
---   payment_type 1定金 2首付 3期付 4尾付 5全款
+-- Table structure for decoration_order（订单主表）
 -- ----------------------------
 DROP TABLE IF EXISTS `decoration_order`;
 CREATE TABLE `decoration_order`  (
@@ -295,136 +188,24 @@ CREATE TABLE `decoration_order`  (
   `order_status` tinyint NOT NULL DEFAULT 0 COMMENT '订单状态 0待支付1已支付2已完成3已退款',
   `contract_status` tinyint NOT NULL DEFAULT 0 COMMENT '合同状态 0未签订1已签订',
   `refund_status` tinyint NOT NULL DEFAULT 0 COMMENT '退款状态 0无退款1待审核2已退款3驳回',
-  `designer_id` bigint NULL DEFAULT NULL COMMENT '承接该订单的设计师 sys_user.id',
-  `manager_id` bigint NULL DEFAULT NULL COMMENT '负责该订单的项目经理 sys_user.id（管进度、签合同）',
-  `payment_type` tinyint NULL DEFAULT NULL COMMENT '付款方式 1定金 2首付 3期付 4尾付 5全款',
-  `paid_amount` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT '已付金额',
-  `payment_status` tinyint NOT NULL DEFAULT 0 COMMENT '付款进度 0未付款1已付定金2已付首付3已付期款4已付尾款5已结清',
-  `need_measure` tinyint NOT NULL DEFAULT 0 COMMENT '是否需要上门量房 0否1是',
-  `measure_status` tinyint NOT NULL DEFAULT 0 COMMENT '量房状态 0未安排1已预约2已量房3已取消',
-  `source_scene` tinyint NOT NULL DEFAULT 1 COMMENT '下单入口 1按方案(先选方案后量房) 2按设计师(先量房后选方案)',
+  `payment_type` tinyint NOT NULL DEFAULT 5 COMMENT '款项类型 1定金2首付3期付4尾付5全款（材料订单默认全款）',
+  `amount` decimal(10, 2) NULL DEFAULT NULL COMMENT '本期应付金额',
+  `ratio` decimal(5, 2) NULL DEFAULT NULL COMMENT '占总金额比例(%)',
+  `due_date` date NULL DEFAULT NULL COMMENT '应付日期',
+  `pay_status` tinyint NOT NULL DEFAULT 0 COMMENT '支付状态 0待支付1已支付2已退款',
+  `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付流水号',
+  `tail_amount` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT '尾款金额（含施工项目费用）',
+  `tail_items` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '尾款包含的施工项目，逗号分隔：拆墙,开槽,水电,贴瓷砖,做吊顶,刮腻子,全屋定制',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '用户订单备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
   `pay_time` datetime NULL DEFAULT NULL COMMENT '支付时间',
   `contract_time` datetime NULL DEFAULT NULL COMMENT '合同签订时间',
   `finish_time` datetime NULL DEFAULT NULL COMMENT '订单完成时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_order_no`(`order_no` ASC) USING BTREE,
   INDEX `idx_order_user`(`user_id` ASC) USING BTREE,
-  INDEX `idx_order_designer`(`designer_id` ASC) USING BTREE,
-  INDEX `idx_order_manager`(`manager_id` ASC) USING BTREE,
   CONSTRAINT `fk_order_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单主表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for order_payment（订单付款计划：定金/首付/期付/尾付/全款）
---   同一订单同一款项类型只允许一条（uk_order_payment_type）
--- ----------------------------
-DROP TABLE IF EXISTS `order_payment`;
-CREATE TABLE `order_payment`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `order_id` bigint NOT NULL COMMENT '关联订单ID',
-  `payment_type` tinyint NOT NULL COMMENT '款项类型 1定金 2首付 3期付 4尾付 5全款',
-  `amount` decimal(10, 2) NOT NULL COMMENT '本期金额',
-  `ratio` decimal(5, 2) NULL DEFAULT NULL COMMENT '占总金额比例(%)',
-  `due_date` date NULL DEFAULT NULL COMMENT '应付日期',
-  `pay_status` tinyint NOT NULL DEFAULT 0 COMMENT '支付状态 0待支付1已支付2已退款',
-  `pay_time` datetime NULL DEFAULT NULL COMMENT '支付时间',
-  `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付流水号',
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_order_payment_type`(`order_id` ASC, `payment_type` ASC) USING BTREE,
-  CONSTRAINT `fk_payment_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单付款计划表（定金/首付/期付/尾付/全款）' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for decoration_contract（装修合同，由项目经理签订；一个订单一份）
--- ----------------------------
-DROP TABLE IF EXISTS `decoration_contract`;
-CREATE TABLE `decoration_contract`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `contract_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '合同编号',
-  `order_id` bigint NOT NULL COMMENT '关联订单ID',
-  `user_id` bigint NOT NULL COMMENT '签约用户（业主）',
-  `designer_id` bigint NULL DEFAULT NULL COMMENT '方案设计师',
-  `manager_id` bigint NOT NULL COMMENT '签订该合同的项目经理',
-  `contract_amount` decimal(10, 2) NOT NULL COMMENT '合同金额',
-  `sign_status` tinyint NOT NULL DEFAULT 0 COMMENT '签订状态 0待签1已签2已作废',
-  `sign_date` datetime NULL DEFAULT NULL COMMENT '签订时间',
-  `file_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '合同附件地址',
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_contract_no`(`contract_no` ASC) USING BTREE,
-  UNIQUE INDEX `uk_contract_order`(`order_id` ASC) USING BTREE,
-  INDEX `idx_contract_manager`(`manager_id` ASC) USING BTREE,
-  CONSTRAINT `fk_contract_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_designer` FOREIGN KEY (`designer_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_manager` FOREIGN KEY (`manager_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修合同表（项目经理签订）' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for decoration_progress（装修进度跟踪表，项目经理上报与审核）
--- ----------------------------
-DROP TABLE IF EXISTS `decoration_progress`;
-CREATE TABLE `decoration_progress`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `order_id` bigint NOT NULL COMMENT '关联订单ID',
-  `progress_status` tinyint NOT NULL COMMENT '装修状态 1待开工2施工中3待竣工验收4已完成5施工异常',
-  `status_desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '当前进度描述',
-  `progress_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '现场实拍图，多图逗号分隔',
-  `report_user_id` bigint NOT NULL COMMENT '上报人员ID（项目经理）',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上报时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  `audit_status` tinyint NOT NULL DEFAULT 0,
-  `audit_user_id` bigint NULL DEFAULT NULL,
-  `audit_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
-  `audit_time` datetime NULL DEFAULT NULL,
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_order_id`(`order_id` ASC) USING BTREE,
-  INDEX `fk_progress_user`(`report_user_id` ASC) USING BTREE,
-  CONSTRAINT `fk_progress_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_progress_user` FOREIGN KEY (`report_user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修进度跟踪表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for measure_record（量房记录表）
---   scene=1 先选方案后量房（plan_id 必有） / scene=2 先量房后选方案（plan_id 为空）
--- ----------------------------
-DROP TABLE IF EXISTS `measure_record`;
-CREATE TABLE `measure_record`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `measure_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '量房单号',
-  `user_id` bigint NOT NULL COMMENT '客户 sys_user.id',
-  `designer_id` bigint NOT NULL COMMENT '上门设计师 sys_user.id',
-  `plan_id` bigint NULL DEFAULT NULL COMMENT '关联方案ID（先选方案后量房时必填）',
-  `scene` tinyint NOT NULL DEFAULT 1 COMMENT '入口 1按方案(先选方案后量房) 2按设计师(先量房后选方案)',
-  `address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '量房地址',
-  `house_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '户型，如三室两厅',
-  `area` decimal(8, 2) NULL DEFAULT NULL COMMENT '实测面积(平米)',
-  `expect_date` datetime NULL DEFAULT NULL COMMENT '期望上门时间',
-  `measure_date` datetime NULL DEFAULT NULL COMMENT '实际量房时间',
-  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态 0待安排1已预约2已量房3已取消',
-  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_measure_no`(`measure_no` ASC) USING BTREE,
-  INDEX `idx_measure_user`(`user_id` ASC) USING BTREE,
-  INDEX `idx_measure_designer`(`designer_id` ASC) USING BTREE,
-  INDEX `idx_measure_plan`(`plan_id` ASC) USING BTREE,
-  CONSTRAINT `fk_measure_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_measure_designer` FOREIGN KEY (`designer_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_measure_plan` FOREIGN KEY (`plan_id`) REFERENCES `decoration_plan` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '量房记录表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单主表（含付款计划与尾款）' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for chat_conversation（设计师-客户会话表，一对一会话）
@@ -540,7 +321,6 @@ CREATE TABLE `sys_home_config`  (
   `jump_link` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '点击跳转链接',
   `sort` int NOT NULL DEFAULT 0 COMMENT '排序权重',
   `status` tinyint NOT NULL DEFAULT 1 COMMENT '展示状态 0隐藏1显示',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '首页配置表' ROW_FORMAT = DYNAMIC;
@@ -577,26 +357,9 @@ CREATE TABLE `sys_visit_stat`  (
   `create_plan_count` int NOT NULL DEFAULT 0 COMMENT '新增上传方案数',
   `create_material_count` int NOT NULL DEFAULT 0 COMMENT '新增上传材料数',
   `finish_order_count` int NOT NULL DEFAULT 0 COMMENT '完成订单数',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '统计生成时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_stat_date`(`stat_date` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统访问统计表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Table structure for email_verification_code（邮箱验证码表）
--- ----------------------------
-DROP TABLE IF EXISTS `email_verification_code`;
-CREATE TABLE `email_verification_code`  (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `email` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '邮箱',
-  `code` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '验证码',
-  `scene` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'register' COMMENT '使用场景：register 注册',
-  `expired_at` datetime NOT NULL COMMENT '过期时间',
-  `used` tinyint NOT NULL DEFAULT 0 COMMENT '是否已使用：0 否 1 是',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_email_scene`(`email` ASC, `scene` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '邮箱验证码表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- 设计服务全流程（业主-设计师）

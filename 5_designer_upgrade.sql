@@ -73,6 +73,22 @@ CALL add_column_if_absent('decoration_order', 'measure_status',
 CALL add_column_if_absent('decoration_order', 'source_scene',
   '`source_scene` tinyint NOT NULL DEFAULT 1 COMMENT ''下单入口 1按方案(先选方案后量房) 2按设计师(先量房后选方案)''');
 
+-- 付款计划字段（由 order_payment 表合并而来）
+CALL add_column_if_absent('decoration_order', 'amount',
+  '`amount` decimal(10, 2) NULL DEFAULT NULL COMMENT ''本期应付金额''');
+CALL add_column_if_absent('decoration_order', 'ratio',
+  '`ratio` decimal(5, 2) NULL DEFAULT NULL COMMENT ''占总金额比例(%)''');
+CALL add_column_if_absent('decoration_order', 'due_date',
+  '`due_date` date NULL DEFAULT NULL COMMENT ''应付日期''');
+CALL add_column_if_absent('decoration_order', 'pay_status',
+  '`pay_status` tinyint NOT NULL DEFAULT 0 COMMENT ''支付状态 0待支付1已支付2已退款''');
+CALL add_column_if_absent('decoration_order', 'trade_no',
+  '`trade_no` varchar(64) NULL DEFAULT NULL COMMENT ''支付流水号''');
+CALL add_column_if_absent('decoration_order', 'tail_amount',
+  '`tail_amount` decimal(10, 2) NOT NULL DEFAULT 0.00 COMMENT ''尾款金额（含施工项目费用）''');
+CALL add_column_if_absent('decoration_order', 'tail_items',
+  '`tail_items` varchar(500) NULL DEFAULT NULL COMMENT ''尾款包含的施工项目，逗号分隔：拆墙,开槽,水电,贴瓷砖,做吊顶,刮腻子,全屋定制''');
+
 DROP PROCEDURE IF EXISTS `add_column_if_absent`;
 
 -- ------------------------------------------------------------
@@ -128,58 +144,13 @@ CREATE TABLE IF NOT EXISTS `design_drawing` (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '设计图纸表（效果图/平面设计图）' ROW_FORMAT = DYNAMIC;
 
 -- ------------------------------------------------------------
--- 5. 装修合同：由项目经理签订
+-- 5. 订单付款计划已合并进 decoration_order 主表，不再单独建 order_payment 表
+--    （payment_type / amount / ratio / due_date / pay_status / trade_no /
+--      tail_amount / tail_items 见第 2 节对 decoration_order 的加列）
 -- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `decoration_contract` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `contract_no` varchar(50) NOT NULL COMMENT '合同编号',
-  `order_id` bigint NOT NULL COMMENT '关联订单ID',
-  `user_id` bigint NOT NULL COMMENT '签约用户（业主）',
-  `designer_id` bigint NULL DEFAULT NULL COMMENT '方案设计师',
-  `manager_id` bigint NOT NULL COMMENT '签订该合同的项目经理',
-  `contract_amount` decimal(10, 2) NOT NULL COMMENT '合同金额',
-  `sign_status` tinyint NOT NULL DEFAULT 0 COMMENT '签订状态 0待签1已签2已作废',
-  `sign_date` datetime NULL DEFAULT NULL COMMENT '签订时间',
-  `file_url` varchar(255) NULL DEFAULT NULL COMMENT '合同附件地址',
-  `remark` varchar(255) NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  `is_deleted` tinyint NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删1已删',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_contract_no`(`contract_no` ASC) USING BTREE,
-  UNIQUE INDEX `uk_contract_order`(`order_id` ASC) USING BTREE,
-  INDEX `idx_contract_manager`(`manager_id` ASC) USING BTREE,
-  CONSTRAINT `fk_contract_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_designer` FOREIGN KEY (`designer_id`) REFERENCES `sys_user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
-  CONSTRAINT `fk_contract_manager` FOREIGN KEY (`manager_id`) REFERENCES `sys_user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '装修合同表（项目经理签订）' ROW_FORMAT = DYNAMIC;
 
 -- ------------------------------------------------------------
--- 6. 订单付款计划/记录：定金、首付、期付、尾付、全款
---    一个订单可以有多条（等额分期：定金10% / 首付30% / 期付30% / 尾付30%）
---    payment_type 与 decoration_order.payment_type 取值一致
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `order_payment` (
-  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
-  `order_id` bigint NOT NULL COMMENT '关联订单ID',
-  `payment_type` tinyint NOT NULL COMMENT '款项类型 1定金 2首付 3期付 4尾付 5全款',
-  `amount` decimal(10, 2) NOT NULL COMMENT '本期金额',
-  `ratio` decimal(5, 2) NULL DEFAULT NULL COMMENT '占总金额比例(%)',
-  `due_date` date NULL DEFAULT NULL COMMENT '应付日期',
-  `pay_status` tinyint NOT NULL DEFAULT 0 COMMENT '支付状态 0待支付1已支付2已退款',
-  `pay_time` datetime NULL DEFAULT NULL COMMENT '支付时间',
-  `trade_no` varchar(64) NULL DEFAULT NULL COMMENT '支付流水号',
-  `remark` varchar(255) NULL DEFAULT NULL COMMENT '备注',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_order_payment_type`(`order_id` ASC, `payment_type` ASC) USING BTREE,
-  CONSTRAINT `fk_payment_order` FOREIGN KEY (`order_id`) REFERENCES `decoration_order` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单付款计划表（定金/首付/期付/尾付/全款）' ROW_FORMAT = DYNAMIC;
-
--- ------------------------------------------------------------
--- 7. 量房记录：两种入口都能落在同一张表
+-- 6. 量房记录：两种入口都能落在同一张表
 --    scene=1 先选方案后量房（plan_id 必有）
 --    scene=2 先量房后选方案（plan_id 为空，量房后再推荐方案）
 -- ------------------------------------------------------------
@@ -211,7 +182,7 @@ CREATE TABLE IF NOT EXISTS `measure_record` (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '量房记录表' ROW_FORMAT = DYNAMIC;
 
 -- ------------------------------------------------------------
--- 8. 设计师-客户会话（按设计师查找 → 直接对话）
+-- 7. 设计师-客户会话（按设计师查找 → 直接对话）
 --    plan_id 可空：还没选方案时也能先聊
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `chat_conversation` (

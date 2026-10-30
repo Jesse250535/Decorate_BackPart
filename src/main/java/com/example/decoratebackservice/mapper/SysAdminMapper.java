@@ -6,14 +6,14 @@ import org.apache.ibatis.annotations.*;
 import java.util.List;
 
 /**
- * 管理员账号 Mapper
+ * 管理员账号 Mapper（管理员已并入 sys_user，is_admin=1 区分）
  */
 @Mapper
 public interface SysAdminMapper {
 
-    @Insert("insert into sys_admin (username,phone,password,avatar,nickname,gender,user_type,role_id,profile," +
-            "violation_count,status,is_deleted) values(#{username},#{phone},#{password},#{avatar},#{nickname}," +
-            "#{gender},#{user_type},#{role_id},#{profile},#{violation_count},#{status},#{is_deleted})")
+    @Insert("insert into sys_user (username,phone,password,avatar,nickname,gender,role_id,profile," +
+            "violation_count,status,is_deleted,is_admin) values(#{username},#{phone},#{password},#{avatar},#{nickname}," +
+            "#{gender},#{role_id},#{profile},#{violation_count},#{status},#{is_deleted},1)")
     int insert(SysAdmin admin);
 
     @Results(id = "adminResult", value = {
@@ -31,25 +31,25 @@ public interface SysAdminMapper {
             @Result(property = "status", column = "status"),
             @Result(property = "is_deleted", column = "is_deleted")
     })
-    @Select("select * from sys_admin where id = #{id}")
+    @Select("select * from sys_user where id = #{id} and is_admin = 1")
     SysAdmin findById(@Param("id") int id);
 
     @ResultMap("adminResult")
-    @Select("select * from sys_admin where username = #{username}")
+    @Select("select * from sys_user where username = #{username} and is_admin = 1")
     SysAdmin findByUsername(@Param("username") String username);
 
     @ResultMap("adminResult")
-    @Select("select * from sys_admin")
+    @Select("select * from sys_user where is_admin = 1")
     List<SysAdmin> findAll();
 
-    @Update("update sys_admin set username=#{username},phone=#{phone},password=#{password},avatar=#{avatar}," +
-            "nickname=#{nickname},gender=#{gender},user_type=#{user_type},role_id=#{role_id},profile=#{profile}," +
-            "violation_count=#{violation_count},status=#{status},is_deleted=#{is_deleted} where id=#{id}")
+    @Update("update sys_user set username=#{username},phone=#{phone},password=#{password},avatar=#{avatar}," +
+            "nickname=#{nickname},gender=#{gender},role_id=#{role_id},profile=#{profile}," +
+            "violation_count=#{violation_count},status=#{status},is_deleted=#{is_deleted} where id=#{id} and is_admin = 1")
     int update(SysAdmin admin);
 
-    @Delete("delete from sys_admin where id = #{id}")
+    @Delete("delete from sys_user where id = #{id} and is_admin = 1")
     int delete(@Param("id") int id);
 
-    @Select("select * from sys_admin where username = #{username} and password = #{password}")
+    @Select("select * from sys_user where username = #{username} and password = #{password} and is_admin = 1")
     SysAdmin findByUsernameAndPassword(@Param("username") String username, @Param("password") String password);
 }

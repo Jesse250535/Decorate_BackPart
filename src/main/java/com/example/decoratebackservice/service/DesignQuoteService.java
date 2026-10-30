@@ -109,6 +109,50 @@ public class DesignQuoteService {
         return quote;
     }
 
+    /**
+     * 量房阶段报价：设计师在「已量房」时录入硬装 / 软装金额，总额自动汇总。
+     * <p>
+     * 与 {@link #submit} 的区别：不要求报价明细、不推进设计服务单状态
+     * （订单仍停在「已量房」，待设计师提交平面图后进入「平面图待确认」），
+     * 报价单直接置为「待业主确认」，供业主在装修进度中查看并据此支付定金。
+     */
+    public DesignQuote submitMeasureQuote(int serviceId, int designerId,
+                                          BigDecimal hardAmount, BigDecimal softAmount, String remark) {
+        DesignServiceOrder order = designServiceOrderService.requireOrder(serviceId);
+        if (order.getDesigner_id() != designerId) {
+            throw new IllegalArgumentException("无权为该设计服务单报价");
+        }
+        if (order.getStatus() != DesignServiceOrderService.STATUS_MEASURED) {
+            throw new IllegalArgumentException("仅「已量房」状态可以录入报价");
+        }
+        BigDecimal hard = hardAmount == null ? BigDecimal.ZERO : hardAmount;
+        BigDecimal soft = softAmount == null ? BigDecimal.ZERO : softAmount;
+        if (hard.signum() < 0 || soft.signum() < 0) {
+            throw new IllegalArgumentException("硬装 / 软装金额不能为负数");
+        }
+        BigDecimal total = hard.add(soft);
+        if (total.signum() <= 0) {
+            throw new IllegalArgumentException("硬装与软装金额不能同时为 0");
+        }
+
+        DesignQuote quote = new DesignQuote();
+        quote.setQuote_no("Q" + LocalDateTime.now().format(NO_FORMAT)
+                + ThreadLocalRandom.current().nextInt(1000, 10000));
+        quote.setService_id(serviceId);
+        quote.setUser_id(order.getUser_id());
+        quote.setDesigner_id(designerId);
+        quote.setHard_amount(hard);
+        quote.setSoft_amount(soft);
+        quote.setTotal_amount(total);
+        quote.setStatus(STATUS_WAIT_CONFIRM);
+        quote.setRemark(remark);
+        quote.setIs_deleted(0);
+        designQuoteMapper.insert(quote);
+        // 同一服务单保留最新一份生效报价
+        designQuoteMapper.invalidateOthers(serviceId, quote.getId());
+        return quote;
+    }
+
     public DesignQuote findById(int id) {
         return designQuoteMapper.findById(id);
     }

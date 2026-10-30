@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 管理员账号实体（sys_admin）
+ * 管理员账号实体（对应 sys_user 中 is_admin=1 的记录）
  */
 @Data
 @NoArgsConstructor

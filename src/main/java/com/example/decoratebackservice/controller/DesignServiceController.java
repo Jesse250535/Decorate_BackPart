@@ -178,6 +178,25 @@ public class DesignServiceController {
                 designServiceOrderService.submitPlanDrawing(id, userId, drawings, deposit));
     }
 
+    @Operation(summary = "设计师在量房阶段录入硬装 / 软装报价（总额与 10% 定金由页面实时计算）")
+    @PostMapping("/{id}/measure-quote")
+    public Result<DesignQuote> submitMeasureQuote(@PathVariable int id,
+                                                  @RequestBody Map<String, Object> body,
+                                                  Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        if (!StaffRole.isDesigner(authentication)) {
+            return Result.forbidden("仅设计师可提交报价");
+        }
+        return Result.success("报价已保存，可继续上传平面设计图",
+                designQuoteService.submitMeasureQuote(id, userId,
+                        decimal(body.get("hard_amount")),
+                        decimal(body.get("soft_amount")),
+                        str(body.get("remark"))));
+    }
+
     @Operation(summary = "设计师提交效果图（业主付定金后）")
     @PostMapping("/{id}/effect-drawing")
     public Result<Integer> submitEffectDrawing(@PathVariable int id,

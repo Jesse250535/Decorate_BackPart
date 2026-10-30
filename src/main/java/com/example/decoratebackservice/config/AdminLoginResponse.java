@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 管理员登录返回信息：包含从 sys_admin 读取的管理员相关字段与角色权限
+ * 管理员登录返回信息：包含从 sys_user（is_admin=1）读取的管理员相关字段与角色权限
  */
 @Data
 @Schema(description = "管理员登录返回信息")
@@ -30,7 +30,7 @@ public class AdminLoginResponse {
     @Schema(description = "性别 0未知1男2女")
     private int gender;
 
-    @Schema(description = "用户身份类型（自动等于角色ID）")
+    @Schema(description = "用户身份类型（前台语义，管理员默认 1）")
     private int user_type;
 
     @Schema(description = "关联角色ID")

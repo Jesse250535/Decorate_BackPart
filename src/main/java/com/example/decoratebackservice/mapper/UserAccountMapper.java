@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.*;
 import java.util.List;
 
 /**
- * 用户账号登录查询 Mapper：支持按邮箱、昵称检索前台用户
+ * 用户账号登录查询 Mapper：支持按邮箱、昵称检索前台用户（is_admin=0）
  * <p>
  * 独立于既有 UserMapper，避免改动原有代码
  */
@@ -28,21 +28,21 @@ public interface UserAccountMapper {
             @Result(property = "status", column = "status"),
             @Result(property = "is_deleted", column = "is_deleted")
     })
-    @Select("select * from sys_user where email = #{email} and is_deleted = 0")
+    @Select("select * from sys_user where email = #{email} and is_deleted = 0 and is_admin = 0")
     List<User> findByEmail(@Param("email") String email);
 
     @ResultMap("userAccountResult")
-    @Select("select * from sys_user where nickname = #{nickname} and is_deleted = 0")
+    @Select("select * from sys_user where nickname = #{nickname} and is_deleted = 0 and is_admin = 0")
     List<User> findByNickname(@Param("nickname") String nickname);
 
     @ResultMap("userAccountResult")
-    @Select("select * from sys_user where username = #{username} and is_deleted = 0")
+    @Select("select * from sys_user where username = #{username} and is_deleted = 0 and is_admin = 0")
     List<User> findByUsername(@Param("username") String username);
 
     /**
      * 按主键查询用户，评论区展示评论者昵称 / 头像时使用
      */
     @ResultMap("userAccountResult")
-    @Select("select * from sys_user where id = #{id} and is_deleted = 0")
+    @Select("select * from sys_user where id = #{id} and is_deleted = 0 and is_admin = 0")
     User findById(@Param("id") int id);
 }

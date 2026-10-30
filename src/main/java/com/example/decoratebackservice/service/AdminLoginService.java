@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * 管理员登录业务层：支持用户名 / 昵称 / 手机号 + 密码登录，
- * 并从 sys_adminrole 读取管理员的角色与权限（sys_admin.role_id 的外键目标表）
+ * 并从 sys_role 读取管理员的角色与权限（sys_user.role_id 的外键目标表）
  */
 @Service
 public class AdminLoginService {
@@ -106,7 +106,7 @@ public class AdminLoginService {
     }
 
     /**
-     * 读取管理员角色信息（sys_adminrole）
+     * 读取管理员角色信息（sys_role）
      */
     public Role findRole(int roleId) {
         return adminRoleMapper.findById(roleId);

@@ -127,10 +127,7 @@ CREATE TABLE IF NOT EXISTS `design_quote_item`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '报价单明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
--- 装修合同（新流程专用）
---   为什么不复用 decoration_contract：那张表通过 order_id 强绑 decoration_order
---   （购买方案/材料的商城订单），而本流程以 design_service_order 为主线，
---   强绑会让「设计服务」在旧订单表里凭空多出一条无意义订单。
+-- 装修合同（设计服务流程，全平台唯一合同表）
 --   sign_status：0 待签  1 已签  2 已作废
 -- ----------------------------
 CREATE TABLE IF NOT EXISTS `design_contract`  (
