@@ -66,6 +66,15 @@ public class UserService {
         return userMapper.findByUsernameForStaff(username);
     }
 
+    /**
+     * 登录认证专用：带密码与 role_id 的显式映射查询
+     * <p>
+     * 供 Spring Security 装配角色权限使用，保证 ROLE_MANAGER 等角色能进入会话
+     */
+    public User findByUsernameForAuth(String username) {
+        return userMapper.findByUsernameForAuth(username);
+    }
+
     public List<User> findAll() {
         return userMapper.findAll();
     }

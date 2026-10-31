@@ -1,11 +1,15 @@
 package com.example.decoratebackservice.service;
 
+import com.example.decoratebackservice.entity.DesignContract;
 import com.example.decoratebackservice.entity.DesignServiceOrder;
+import com.example.decoratebackservice.mapper.DesignContractMapper;
 import com.example.decoratebackservice.mapper.DesignServiceOrderMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -43,8 +47,14 @@ public class DesignServiceOrderService {
 
     private static final DateTimeFormatter NO_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
+    /** 合同编号日期段（DC + yyyyMMdd + 6 位随机数） */
+    private static final DateTimeFormatter CONTRACT_NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     @Autowired
     private DesignServiceOrderMapper designServiceOrderMapper;
+
+    @Autowired
+    private DesignContractMapper designContractMapper;
 
     /**
      * 业主提交设计需求（初始为待接单）
@@ -126,8 +136,11 @@ public class DesignServiceOrderService {
      */
     public int confirmPlan(int id, int userId) {
         requireOwner(id, userId);
-        return check(designServiceOrderMapper.markPlanConfirm(id, LocalDateTime.now()),
+        int rows = check(designServiceOrderMapper.markPlanConfirm(id, LocalDateTime.now()),
                 "当前状态不能确认平面图");
+        // 平面图确认后即生成合同草稿：随机编号入库，签约时沿用，不会每次刷新都变
+        ensureContract(requireOrder(id));
+        return rows;
     }
 
     /**
@@ -138,8 +151,11 @@ public class DesignServiceOrderService {
         if (order.getDeposit_amount() == null || order.getDeposit_amount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("尚未确定定金金额");
         }
-        return check(designServiceOrderMapper.markDeposit(id, order.getDeposit_amount(), LocalDateTime.now()),
+        int rows = check(designServiceOrderMapper.markDeposit(id, order.getDeposit_amount(), LocalDateTime.now()),
                 "当前状态不能支付定金");
+        // 定金支付成功即生成合同草稿：进入合同页直接看到固定编号
+        ensureContract(requireOrder(id));
+        return rows;
     }
 
     /**
@@ -178,6 +194,24 @@ public class DesignServiceOrderService {
     }
 
     /**
+     * 项目经理：所有已签合同的装修服务单
+     */
+    public java.util.List<DesignServiceOrder> listSignedProjects() {
+        return designServiceOrderMapper.findSignedProjects();
+    }
+
+    /**
+     * 业主线上签合同后回写：平面图确认后（4~8）→ 已签合同
+     * <p>
+     * 与 {@link #markContracted} 的区别：不要求报价确认（状态 8），
+     * 只要业主已确认平面图即可签约，便于「付定金后立即签合同」的流程。
+     */
+    public int markContractedByOwner(int id, int contractId, Integer managerId, java.time.LocalDate startDate) {
+        return check(designServiceOrderMapper.markOwnerContract(id, contractId, managerId, LocalDateTime.now(), startDate),
+                "当前状态不能签订合同，请先确认平面设计图");
+    }
+
+    /**
      * 首个施工阶段开工：已签合同 → 施工中
      */
     public int markBuilding(int id) {
@@ -203,6 +237,60 @@ public class DesignServiceOrderService {
 
     public int bindManager(int id, int managerId) {
         return designServiceOrderMapper.bindManager(id, managerId);
+    }
+
+    /**
+     * 确保服务单已有合同草稿（业主确认平面图 / 支付定金后自动调用）。
+     * <p>
+     * 没有合同就插入一条待签（sign_status=0）记录，合同编号随机生成并落库；
+     * 已有则原样返回，签约时沿用同一编号，刷新页面也不会变。
+     * 金额先按业主预算落库，正式签约时再以生效报价总额覆盖。
+     *
+     * @param order 已存在的设计服务单
+     * @return 服务单对应的合同（新插入或原有）
+     */
+    public DesignContract ensureContract(DesignServiceOrder order) {
+        return ensureContract(order, order.getBudget());
+    }
+
+    /**
+     * 同上，合同金额可由调用方指定（合同页按生效报价总额生成，避免先落预算再改）
+     */
+    public DesignContract ensureContract(DesignServiceOrder order, BigDecimal amount) {
+        DesignContract exist = designContractMapper.findByService(order.getId());
+        if (exist != null) {
+            return exist;
+        }
+        for (int attempt = 0; attempt < 3; attempt++) {
+            DesignContract contract = new DesignContract();
+            contract.setContract_no("DC" + LocalDate.now().format(CONTRACT_NO_DATE)
+                    + ThreadLocalRandom.current().nextInt(100000, 1000000));
+            contract.setService_id(order.getId());
+            contract.setUser_id(order.getUser_id());
+            contract.setDesigner_id(order.getDesigner_id());
+            // 尚未指派项目经理时以 0 占位，项目经理接单后可回写
+            contract.setManager_id(order.getManager_id() == null ? 0 : order.getManager_id());
+            contract.setDecoration_mode(order.getDecoration_mode());
+            contract.setContract_amount(amount == null ? BigDecimal.ZERO : amount);
+            contract.setFirst_payment_amount(BigDecimal.ZERO);
+            contract.setSign_status(0);
+            contract.setRemark("系统自动生成，待业主签署");
+            contract.setIs_deleted(0);
+            try {
+                designContractMapper.insert(contract);
+                DesignContract saved = designContractMapper.findById(contract.getId());
+                if (saved != null) {
+                    return saved;
+                }
+            } catch (DuplicateKeyException ignored) {
+                // 编号或 service_id 撞车：并发下可能已被插入，查一次直接返回
+                DesignContract concurrent = designContractMapper.findByService(order.getId());
+                if (concurrent != null) {
+                    return concurrent;
+                }
+            }
+        }
+        return designContractMapper.findByService(order.getId());
     }
 
     /**

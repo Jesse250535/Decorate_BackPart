@@ -57,6 +57,18 @@ public class DesignContract {
     @Schema(description = "合同附件地址")
     private String file_url;
 
+    @Schema(description = "业主签名图片地址")
+    private String signature_url;
+
+    @Schema(description = "首付款金额（(合同金额-定金)×15%）")
+    private BigDecimal first_payment_amount;
+
+    @Schema(description = "首付款支付时间")
+    private LocalDateTime first_payment_time;
+
+    @Schema(description = "合同回执地址")
+    private String receipt_url;
+
     @Schema(description = "备注")
     private String remark;
 

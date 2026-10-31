@@ -119,6 +119,28 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     User findByUsernameForStaff(@Param("username") String username);
 
     /**
+     * 登录认证专用：按用户名查出密码 + role_id（显式映射，避免驼峰映射丢掉带下划线的列）。
+     * <p>
+     * 不能用 findByUsername：它的 select * 自动映射会把 role_id 丢掉，
+     * 导致登录后装配不出 ROLE_MANAGER / ROLE_DESIGNER 等角色权限，
+     * 项目经理、设计师调用需要角色的接口全部 403。
+     *
+     * @param username 用户名
+     * @return 用户信息（含 password 与 role_id）；不存在返回 null
+     */
+    @Results(id = "authUserResult", value = {
+            @Result(property = "id", column = "id"),
+            @Result(property = "username", column = "username"),
+            @Result(property = "password", column = "password"),
+            @Result(property = "nickname", column = "nickname"),
+            @Result(property = "role_id", column = "role_id"),
+            @Result(property = "status", column = "status"),
+            @Result(property = "is_deleted", column = "is_deleted")
+    })
+    @Select("select * from sys_user where username = #{username} and is_admin = 0")
+    User findByUsernameForAuth(@Param("username") String username);
+
+    /**
      * 首次登录弹窗选定身份类型后回写：user_type 记下所选类型，chosen 置 1 表示不再弹窗
      *
      * @param username  用户名

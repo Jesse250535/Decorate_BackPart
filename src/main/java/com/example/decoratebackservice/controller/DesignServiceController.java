@@ -11,6 +11,7 @@ import com.example.decoratebackservice.mapper.DesignContractMapper;
 import com.example.decoratebackservice.security.StaffRole;
 import com.example.decoratebackservice.service.ConstructionPaymentNodeService;
 import com.example.decoratebackservice.service.ConstructionStageService;
+import com.example.decoratebackservice.service.ContractSignService;
 import com.example.decoratebackservice.service.DesignQuoteService;
 import com.example.decoratebackservice.service.DesignServiceOrderService;
 import com.example.decoratebackservice.service.UserService;
@@ -24,7 +25,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -57,6 +60,9 @@ public class DesignServiceController {
 
     @Autowired
     private DesignContractMapper designContractMapper;
+
+    @Autowired
+    private ContractSignService contractSignService;
 
     @Autowired
     private UserService userService;
@@ -213,7 +219,90 @@ public class DesignServiceController {
                 designServiceOrderService.submitEffectDrawing(id, userId, str(body.get("drawings"))));
     }
 
+    /* ==================== 业主在线签合同 ==================== */
+
+    @Operation(summary = "业主查看合同草稿：合同金额、已付定金、首付款（余额 15%）、开工日期")
+    @GetMapping("/{id}/contract/draft")
+    public Result<Map<String, Object>> contractDraft(@PathVariable int id, Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        return Result.success(contractSignService.draft(id, userId));
+    }
+
+    @Operation(summary = "业主在线签署合同：提交手写签名，签约即生成施工计划与付款节点")
+    @PostMapping("/{id}/contract/sign")
+    public Result<DesignContract> signContractByOwner(@PathVariable int id,
+                                                      @RequestBody(required = false) Map<String, Object> body,
+                                                      Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        if (StaffRole.isDesigner(authentication) || StaffRole.isManager(authentication)) {
+            return Result.forbidden("仅业主可以签署合同");
+        }
+        return Result.success("合同已签订，请支付首付款",
+                contractSignService.sign(id, userId, body == null ? new HashMap<>() : body));
+    }
+
+    @Operation(summary = "业主支付首付款：合同金额扣除定金后余额的 15%")
+    @PutMapping("/{id}/contract/pay-first")
+    public Result<DesignContract> payFirstPayment(@PathVariable int id, Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        return Result.success("首付款支付成功", contractSignService.payFirst(id, userId));
+    }
+
+    @Operation(summary = "业主上传合同回执：纸质合同拍照 / 扫描件地址")
+    @PostMapping("/{id}/contract/receipt")
+    public Result<DesignContract> uploadContractReceipt(@PathVariable int id,
+                                                        @RequestBody Map<String, Object> body,
+                                                        Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        return Result.success("合同回执已上传",
+                contractSignService.uploadReceipt(id, userId, str(body.get("receipt_url"))));
+    }
+
     /* ==================== 项目经理端 ==================== */
+
+    @Operation(summary = "项目经理查看所有已签合同的装修服务单与施工进度概况")
+    @GetMapping("/manager/projects")
+    public Result<List<Map<String, Object>>> managerSignedProjects(Authentication authentication) {
+        if (!StaffRole.isManager(authentication)) {
+            return Result.forbidden("仅项目经理可查看施工项目");
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (DesignServiceOrder order : designServiceOrderService.listSignedProjects()) {
+            List<ConstructionStage> stages = constructionStageService.findByService(order.getId());
+            int done = 0;
+            String doing = null;
+            String next = null;
+            for (ConstructionStage stage : stages) {
+                if (stage.getStatus() >= ConstructionStageService.STAGE_DONE) {
+                    done++;
+                } else if (doing == null && stage.getStatus() == ConstructionStageService.STAGE_DOING) {
+                    doing = stage.getStage_name();
+                } else if (next == null) {
+                    next = stage.getStage_name();
+                }
+            }
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("order", order);
+            row.put("stage_total", stages.size());
+            row.put("stage_done", done);
+            row.put("progress", stages.isEmpty() ? 0 : Math.round(done * 100f / stages.size()));
+            row.put("current_stage", doing != null ? doing : (done < stages.size() ? next : "已全部完成"));
+            rows.add(row);
+        }
+        return Result.success(rows);
+    }
 
     @Operation(summary = "项目经理查看待签合同的设计服务单")
     @GetMapping("/manager/wait-contract")

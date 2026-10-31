@@ -84,6 +84,13 @@ public interface DesignServiceOrderMapper {
     List<DesignServiceOrder> findWaitContract();
 
     /**
+     * 项目经理：所有已签合同的装修服务单（业主在线签约后即可看到施工项目）
+     */
+    @ResultMap("dsoResult")
+    @Select("select * from design_service_order where status >= 9 and is_deleted = 0 order by id desc")
+    List<DesignServiceOrder> findSignedProjects();
+
+    /**
      * 通用状态推进：只有当前状态仍等于 expect 时才生效
      */
     @Update("update design_service_order set status = #{next} where id = #{id} and status = #{expect} and is_deleted = 0")
@@ -121,6 +128,16 @@ public interface DesignServiceOrderMapper {
 
     @Update("update design_service_order set status = 10 where id = #{id} and status = 9 and is_deleted = 0")
     int markStart(@Param("id") int id);
+
+    /**
+     * 业主线上签合同：平面图确认后（4~8）任一状态 → 已签合同（9）
+     */
+    @Update("update design_service_order set status = 9, contract_id = #{contract_id}, " +
+            "manager_id = ifnull(#{manager_id,jdbcType=BIGINT}, manager_id), contract_time = #{time}, " +
+            "start_date = #{start_date} where id = #{id} and status between 4 and 8 and is_deleted = 0")
+    int markOwnerContract(@Param("id") int id, @Param("contract_id") int contract_id,
+                          @Param("manager_id") Integer manager_id, @Param("time") LocalDateTime time,
+                          @Param("start_date") LocalDate start_date);
 
     @Update("update design_service_order set status = 11 where id = #{id} and status = 10 and is_deleted = 0")
     int markWaitFinal(@Param("id") int id);

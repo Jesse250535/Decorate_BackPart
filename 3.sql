@@ -24,7 +24,7 @@
     order_payment 表已删除；材料订单默认全款（payment_type=5），
     尾款金额与尾款施工项目分别用 tail_amount / tail_items 记录。
     */
-create database decoration_company_system;
+create database if not exists decoration_company_system;
 use decoration_company_system;
 
 SET NAMES utf8mb4;
@@ -485,6 +485,10 @@ CREATE TABLE `design_contract`  (
   `sign_date` datetime NULL DEFAULT NULL COMMENT '签订时间',
   `start_date` date NULL DEFAULT NULL COMMENT '计划开工日期',
   `file_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '合同附件地址',
+  `signature_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '业主签名图片地址',
+  `first_payment_amount` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '首付款金额（(合同金额-定金)×15%）',
+  `first_payment_time` datetime NULL DEFAULT NULL COMMENT '首付款支付时间',
+  `receipt_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '合同回执地址',
   `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

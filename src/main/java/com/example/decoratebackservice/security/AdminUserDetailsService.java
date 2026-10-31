@@ -44,7 +44,9 @@ public class AdminUserDetailsService implements UserDetailsService {
             return new LoginUser(admin, buildAuthorities(admin.getRole_id()));
         }
         // 管理员账号不存在时，回退到普通用户账号（sys_user 中 is_admin=0），支持以 username 登录
-        User user = userService.findByUsername(username);
+        // 这里必须用 findByUsernameForAuth：findByUsername 的自动映射会丢掉 role_id，
+        // 导致员工账号登录后装配不出 ROLE_MANAGER 等角色权限，调用员工接口一律 403
+        User user = userService.findByUsernameForAuth(username);
         if (user != null) {
             return new org.springframework.security.core.userdetails.User(
                     user.getUsername(),

@@ -2,8 +2,10 @@
   4_seed_data.sql —— 结构（3.sql）之后的种子数据
   ==================================================================
   执行顺序：
-    1) 3.sql   建全部 21 张表
+    1) 3.sql   建全部 21 张表（design_contract 已含业主签约字段）
     2) 本文件  写入种子数据（只在空库执行一次，主键固定）
+               文件末尾附带 design_contract 签约字段兜底 DDL，
+               即原 7_contract_sign.sql，已合并进来，不必再单独执行
 
   注：material_stock_record（材料出入库流水）已从结构里移除，
       本文件不再写入该表数据，材料库存只体现在 decoration_material.stock。
@@ -28,6 +30,9 @@
     admin                    管理后台
   ==================================================================
 */
+
+-- 目标库（与 3.sql 保持一致，便于单独执行本文件）
+USE `decoration_company_system`;
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -194,4 +199,51 @@ INSERT INTO `user_feedback`
 (1, 1, '希望能增加设计师上门量房的预约提醒。', '13800000001', 1, '已记录，下个版本加入短信提醒');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================
+-- 结构兜底：业主线上签订合同（原 7_contract_sign.sql，已并入本文件）
+--   3.sql 的 design_contract 建表已含这 4 列，这里先查 information_schema
+--   再决定是否 ALTER：老库自动补齐，新库不会报 Duplicate column name。
+--   sign_status：0 待签 1 已签 2 已作废
+-- ============================================================
+
+-- 1) 业主手写签名图片
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_contract` ADD COLUMN `signature_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT ''业主签名图片地址'' AFTER `file_url`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_contract' AND COLUMN_NAME = 'signature_url');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 2) 首付款金额（(合同金额 - 定金) × 15%）
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_contract` ADD COLUMN `first_payment_amount` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT ''首付款金额（(合同金额-定金)×15%）'' AFTER `signature_url`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_contract' AND COLUMN_NAME = 'first_payment_amount');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 3) 首付款支付时间
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_contract` ADD COLUMN `first_payment_time` datetime NULL DEFAULT NULL COMMENT ''首付款支付时间'' AFTER `first_payment_amount`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_contract' AND COLUMN_NAME = 'first_payment_time');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 4) 合同回执（纸质合同拍照 / 扫描件）
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_contract` ADD COLUMN `receipt_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT ''合同回执地址'' AFTER `first_payment_time`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_contract' AND COLUMN_NAME = 'receipt_url');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
 
