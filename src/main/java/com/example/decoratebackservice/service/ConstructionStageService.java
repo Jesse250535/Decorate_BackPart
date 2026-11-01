@@ -47,22 +47,22 @@ public class ConstructionStageService {
     private record Template(String code, String name, int type, int days) {
     }
 
+    /**
+     * 硬装：拆墙开槽+水电改造、贴砖+吊顶+刮腻子、全屋定制+保洁 三段合并推进
+     * （工期为原细分阶段之和：3+2+5=10、7+4+5=16、15+2=17）
+     */
     private static final List<Template> HARD_STAGES = List.of(
-            new Template("demolition", "拆墙", 1, 3),
-            new Template("slotting", "开槽", 1, 2),
-            new Template("plumbing", "水电改造", 1, 5),
-            new Template("tiling", "贴瓷砖", 1, 7),
-            new Template("ceiling", "做吊顶", 1, 4),
-            new Template("putty", "刮腻子", 1, 5),
-            new Template("custom", "全屋定制", 1, 15),
-            new Template("cleaning", "保洁", 1, 2)
+            new Template("structure", "拆改与水电", 1, 10),
+            new Template("masonry", "泥瓦与油漆", 1, 16),
+            new Template("custom_clean", "全屋定制与保洁", 1, 17)
     );
 
+    /**
+     * 软装：家具进场+窗帘布艺、灯具安装+软装饰品 两段合并推进（3+2=5、2+2=4）
+     */
     private static final List<Template> SOFT_STAGES = List.of(
-            new Template("furniture", "家具进场", 2, 3),
-            new Template("curtain", "窗帘布艺", 2, 2),
-            new Template("lighting", "灯具安装", 2, 2),
-            new Template("decor", "软装饰品", 2, 2)
+            new Template("furnishing", "家具与窗帘", 2, 5),
+            new Template("decor_fitting", "灯具与饰品", 2, 4)
     );
 
     /**
@@ -101,7 +101,9 @@ public class ConstructionStageService {
     }
 
     /**
-     * 硬装 / 软装 / 整装 三种组合，保洁始终排在软装之前
+     * 硬装 / 软装 / 整装 三种组合：
+     * 硬装三段（末段「全屋定制与保洁」已含保洁），整装再接软装两段；
+     * 纯软装没有全屋定制段，额外补一条独立保洁。
      */
     private List<Template> resolveTemplates(int mode) {
         List<Template> result = new ArrayList<>();
@@ -110,12 +112,7 @@ public class ConstructionStageService {
             result.add(new Template("cleaning", "保洁", 1, 2));
             return result;
         }
-        for (Template t : HARD_STAGES) {
-            if (!"cleaning".equals(t.code())) {
-                result.add(t);
-            }
-        }
-        result.add(new Template("cleaning", "保洁", 1, 2));
+        result.addAll(HARD_STAGES);
         if (mode == 3) {
             result.addAll(SOFT_STAGES);
         }
