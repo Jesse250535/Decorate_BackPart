@@ -141,6 +141,27 @@ username,phone,password,avatar,nickname,gender,user_type,role_id,profile,violati
     User findByUsernameForAuth(@Param("username") String username);
 
     /**
+     * 按角色编码查用户（聊天联系人等场景用）。
+     * <p>
+     * 角色编码取自 sys_role.role_code，避免把 role_id 数值写死在业务代码里
+     * （库中 1 普通用户 / 2 设计师 / 3 项目经理，与历史常量注释并不一致）。
+     *
+     * @param roleCode 角色编码，如 ROLE_DESIGNER
+     * @return 该角色的用户列表
+     */
+    @Results(id = "roleUserResult", value = {
+            @Result(property = "id", column = "id"),
+            @Result(property = "username", column = "username"),
+            @Result(property = "nickname", column = "nickname"),
+            @Result(property = "avatar", column = "avatar"),
+            @Result(property = "role_id", column = "role_id")
+    })
+    @Select("select u.id, u.username, u.nickname, u.avatar, u.role_id from sys_user u " +
+            "join sys_role r on r.id = u.role_id " +
+            "where r.role_code = #{role_code} and u.is_admin = 0 and u.is_deleted = 0 order by u.id")
+    List<User> findByRoleCode(@Param("role_code") String roleCode);
+
+    /**
      * 首次登录弹窗选定身份类型后回写：user_type 记下所选类型，chosen 置 1 表示不再弹窗
      *
      * @param username  用户名

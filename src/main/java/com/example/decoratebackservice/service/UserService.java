@@ -80,6 +80,13 @@ public class UserService {
     }
 
     /**
+     * 按角色编码查用户，编码见 sys_role.role_code（如 ROLE_DESIGNER）
+     */
+    public List<User> findByRoleCode(String roleCode) {
+        return userMapper.findByRoleCode(roleCode);
+    }
+
+    /**
      * 更新信息
      *
      * @param data
