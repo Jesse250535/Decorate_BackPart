@@ -130,6 +130,19 @@ public class DesignQuoteService {
         if (hard.signum() < 0 || soft.signum() < 0) {
             throw new IllegalArgumentException("硬装 / 软装金额不能为负数");
         }
+        // 本单只做硬装或只做软装时，只能录入对应那一项，另一项强制按 0 处理
+        int mode = order.getDecoration_mode();
+        if (mode == 1) {
+            if (soft.signum() > 0) {
+                throw new IllegalArgumentException("本单为硬装，只能填写硬装金额");
+            }
+            soft = BigDecimal.ZERO;
+        } else if (mode == 2) {
+            if (hard.signum() > 0) {
+                throw new IllegalArgumentException("本单为软装，只能填写软装金额");
+            }
+            hard = BigDecimal.ZERO;
+        }
         BigDecimal total = hard.add(soft);
         if (total.signum() <= 0) {
             throw new IllegalArgumentException("硬装与软装金额不能同时为 0");
