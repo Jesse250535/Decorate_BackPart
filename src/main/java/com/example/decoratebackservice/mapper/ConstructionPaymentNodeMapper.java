@@ -39,8 +39,14 @@ public interface ConstructionPaymentNodeMapper {
 
     @ResultMap("pnodeResult")
     @Select("select * from construction_payment_node where service_id = #{service_id} " +
-            "order by field(node_code,'DEPOSIT','TILING','CUSTOM','FINAL')")
+            "order by case when node_code = 'DEPOSIT' then 0 when node_code = 'FINAL' then 2 else 1 end, id")
     List<ConstructionPaymentNode> findByService(@Param("service_id") int serviceId);
+
+    /**
+     * 删除未支付的节点：老的分期规则切换为按阶段分期时清理旧数据，已支付记录保留
+     */
+    @Delete("delete from construction_payment_node where service_id = #{service_id} and pay_status = 0")
+    int deleteUnpaidByService(@Param("service_id") int serviceId);
 
     @ResultMap("pnodeResult")
     @Select("select * from construction_payment_node where service_id = #{service_id} and node_code = #{node_code}")

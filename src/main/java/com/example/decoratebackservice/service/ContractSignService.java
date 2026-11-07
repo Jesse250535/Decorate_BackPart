@@ -75,7 +75,8 @@ public class ContractSignService {
         data.put("contract_no", contract == null ? previewNo() : contract.getContract_no());
         data.put("contract_amount", amount);
         data.put("deposit_amount", deposit);
-        data.put("first_payment_rate", 15);
+        // 首付款已并入「按施工阶段分期」：每个阶段 20%、灯具与饰品 10%、余下 10% 作尾款
+        data.put("first_payment_rate", 0);
         data.put("first_payment_amount", firstPayment);
         data.put("start_date", contract != null && contract.getStart_date() != null
                 ? contract.getStart_date() : LocalDate.now().plusDays(3));
@@ -177,7 +178,8 @@ public class ContractSignService {
             throw new IllegalArgumentException("首付款已支付，请勿重复操作");
         }
         if (nvl(contract.getFirst_payment_amount()).signum() <= 0) {
-            throw new IllegalArgumentException("当前首付款金额为 0，无需支付");
+            // 新规则按施工阶段分期付款，签约后不再单独收首付款，直接返回即可
+            return contract;
         }
         int rows = designContractMapper.updateFirstPayment(contract.getId(), LocalDateTime.now());
         if (rows == 0) {
@@ -226,14 +228,17 @@ public class ContractSignService {
     }
 
     /**
-     * 首付款 =（合同金额 - 已付定金）× 15%
+     * 首付款
+     * <p>
+     * 现已改为「按施工阶段分期」：签约时不再单独收取首付款，
+     * 每完成一个施工阶段由业主验收后支付该阶段款（20%，灯具与饰品 10%，余下作尾款）。
      */
     private BigDecimal firstPayment(BigDecimal amount, BigDecimal deposit) {
         BigDecimal rest = amount.subtract(deposit);
         if (rest.signum() < 0) {
             throw new IllegalArgumentException("定金已超过合同金额，请核对报价");
         }
-        return rest.multiply(FIRST_PAY_RATE).setScale(2, RoundingMode.HALF_UP);
+        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
     private String previewNo() {

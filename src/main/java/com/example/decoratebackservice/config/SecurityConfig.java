@@ -96,6 +96,11 @@ public class SecurityConfig {
                     "/comment/list",
                     // 公司介绍页「公司公告」与公告中心：游客可浏览已发布公告
                     "/notice/list",
+                    // 支付回调：由支付宝服务器直接访问，不带登录态，安全边界依赖 RSA2 验签
+                    "/payment/alipay/notify",
+                    "/payment/alipay/return",
+                    // 本地模拟收银台：仅在 alipay.mock=true 时生效，生产环境请关闭 mock
+                    "/payment/mock/**",
                     // 上传后的图片由浏览器直接访问，必须放行；
                     // 否则 <img src> 拿到 401，页面只显示破图
                     "/uploads/**",

@@ -98,6 +98,13 @@
             <version>2.0.43</version>
         </dependency>
 
+        <!--支付宝开放平台 SDK（网页/手机网站支付、验签、查单）-->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.39.282.ALL</version>
+        </dependency>
+
     </dependencies>
 
     <build>
