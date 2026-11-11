@@ -53,6 +53,7 @@ public interface DesignServiceOrderMapper {
             @Result(property = "effect_round", column = "effect_round"),
             @Result(property = "effect_audit_time", column = "effect_audit_time"),
             @Result(property = "effect_reject_reason", column = "effect_reject_reason"),
+            @Result(property = "effect_reject_images", column = "effect_reject_images"),
             @Result(property = "quote_id", column = "quote_id"),
             @Result(property = "quote_time", column = "quote_time"),
             @Result(property = "contract_id", column = "contract_id"),
@@ -122,7 +123,7 @@ public interface DesignServiceOrderMapper {
      */
     @Update("update design_service_order set status = 6, effect_drawing_time = #{time}, effect_drawings = #{drawings}, " +
             "effect_round = ifnull(effect_round, 0) + 1, effect_audit_status = 1, " +
-            "effect_audit_time = null, effect_reject_reason = null " +
+            "effect_audit_time = null, effect_reject_reason = null, effect_reject_images = null " +
             "where id = #{id} and is_deleted = 0 and ifnull(effect_round, 0) < 3 " +
             "and (status = 5 or (status between 6 and 8 and effect_audit_status = 3))")
     int markEffectDrawing(@Param("id") int id, @Param("time") LocalDateTime time, @Param("drawings") String drawings);
@@ -135,12 +136,13 @@ public interface DesignServiceOrderMapper {
     int markEffectPass(@Param("id") int id, @Param("time") LocalDateTime time);
 
     /**
-     * 业主退回效果图：待审核（1）→ 已退回（3），附退回原因供设计师重做
+     * 业主退回效果图：待审核（1）→ 已退回（3），附退回原因与问题图片供设计师重做
      */
     @Update("update design_service_order set effect_audit_status = 3, effect_audit_time = #{time}, " +
-            "effect_reject_reason = #{reason} " +
+            "effect_reject_reason = #{reason}, effect_reject_images = #{images} " +
             "where id = #{id} and status between 6 and 8 and effect_audit_status = 1 and is_deleted = 0")
-    int markEffectReject(@Param("id") int id, @Param("time") LocalDateTime time, @Param("reason") String reason);
+    int markEffectReject(@Param("id") int id, @Param("time") LocalDateTime time,
+                         @Param("reason") String reason, @Param("images") String images);
 
     @Update("update design_service_order set status = 7, quote_id = #{quote_id}, quote_time = #{time} " +
             "where id = #{id} and status = 6 and is_deleted = 0")

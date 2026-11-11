@@ -189,9 +189,11 @@ public class DesignServiceOrderService {
     /**
      * 业主审核效果图：合格则进入签约阶段，不合格则退回设计师重做（最多三稿）
      *
-     * @param pass true 确认合格 / false 退回重做
+     * @param pass   true 确认合格 / false 退回重做
+     * @param reason 退回原因，退回时必填
+     * @param images 退回时上传的问题图片，多图逗号分隔，退回时必填
      */
-    public int reviewEffectDrawing(int id, int userId, boolean pass, String reason) {
+    public int reviewEffectDrawing(int id, int userId, boolean pass, String reason, String images) {
         requireOwner(id, userId);
         DesignServiceOrder order = requireOrder(id);
         // 效果图阶段（6）之后设计师可能已提交报价（7/8），审核仍需允许
@@ -213,7 +215,10 @@ public class DesignServiceOrderService {
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("请填写不满意的原因，便于设计师针对性修改");
         }
-        return check(designServiceOrderMapper.markEffectReject(id, LocalDateTime.now(), reason),
+        if (images == null || images.isBlank()) {
+            throw new IllegalArgumentException("请至少上传一张说明问题的图片");
+        }
+        return check(designServiceOrderMapper.markEffectReject(id, LocalDateTime.now(), reason, images),
                 "当前状态不能退回效果图");
     }
 

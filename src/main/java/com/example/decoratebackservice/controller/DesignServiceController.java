@@ -234,7 +234,8 @@ public class DesignServiceController {
         Object passFlag = body.get("pass");
         boolean pass = Boolean.TRUE.equals(passFlag) || "true".equalsIgnoreCase(String.valueOf(passFlag));
         return Result.success(pass ? "效果图已确认合格，可以签订合同" : "已退回设计师重新设计效果图",
-                designServiceOrderService.reviewEffectDrawing(id, userId, pass, str(body.get("reason"))));
+                designServiceOrderService.reviewEffectDrawing(
+                        id, userId, pass, str(body.get("reason")), str(body.get("images"))));
     }
 
     /* ==================== 业主在线签合同 ==================== */

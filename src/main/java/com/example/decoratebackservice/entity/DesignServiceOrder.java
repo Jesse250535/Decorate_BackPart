@@ -102,6 +102,9 @@ public class DesignServiceOrder {
     @Schema(description = "业主退回效果图的原因")
     private String effect_reject_reason;
 
+    @Schema(description = "业主退回效果图时上传的问题图片，多图逗号分隔")
+    private String effect_reject_images;
+
     @Schema(description = "当前生效报价单ID")
     private Integer quote_id;
 

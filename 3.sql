@@ -368,6 +368,9 @@ CREATE TABLE `sys_visit_stat`  (
 --     3 平面图待业主确认  4 平面图已确认(待付定金)  5 已付定金(待出效果图)
 --     6 效果图已出(待报价)  7 已报价(待业主确认)  8 报价已确认(待签合同)
 --     9 已签合同(待开工)  10 施工中  11 已完工(待付尾款)  12 已完成  13 已取消
+--   效果图审核（effect_audit_status）：0 未提交 1 待业主审核 2 业主已通过 3 业主已退回
+--     业主退回后设计师可重做，每次提交 effect_round + 1，最多 3 稿；
+--     仅当 effect_audit_status = 2（业主确认合格）才允许签订合同（status 9）。
 -- ----------------------------
 DROP TABLE IF EXISTS `design_service_order`;
 CREATE TABLE `design_service_order`  (
@@ -394,6 +397,11 @@ CREATE TABLE `design_service_order`  (
   `deposit_time` datetime NULL DEFAULT NULL COMMENT '定金支付时间',
   `effect_drawing_time` datetime NULL DEFAULT NULL COMMENT '效果图提交时间',
   `effect_drawings` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '效果图地址，多图逗号分隔',
+  `effect_audit_status` tinyint NOT NULL DEFAULT 0 COMMENT '效果图审核状态 0未提交 1待业主审核 2业主已通过 3业主已退回',
+  `effect_round` int NOT NULL DEFAULT 0 COMMENT '已提交效果图稿次（最多3稿）',
+  `effect_audit_time` datetime NULL DEFAULT NULL COMMENT '业主审核效果图时间',
+  `effect_reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '业主退回效果图的原因',
+  `effect_reject_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '业主退回效果图时上传的问题图片，多图逗号分隔',
   `quote_id` bigint NULL DEFAULT NULL COMMENT '当前生效报价单ID',
   `quote_time` datetime NULL DEFAULT NULL COMMENT '报价单提交时间',
   `contract_id` bigint NULL DEFAULT NULL COMMENT '合同ID',
@@ -529,6 +537,7 @@ CREATE TABLE `construction_stage`  (
   `accept_user_id` bigint NULL DEFAULT NULL COMMENT '验收业主 sys_user.id',
   `accept_time` datetime NULL DEFAULT NULL COMMENT '验收时间',
   `accept_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '验收意见/不通过原因',
+  `accept_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '验收不通过凭证图，多图逗号分隔',
   `rework_status` tinyint NOT NULL DEFAULT 0 COMMENT '返工状态 0无需返工1返工中2返工完成',
   `rework_days` int NOT NULL DEFAULT 0 COMMENT '返工工期(天)',
   `rework_start_date` date NULL DEFAULT NULL COMMENT '返工开始日期',
@@ -571,5 +580,31 @@ CREATE TABLE `construction_payment_node`  (
   UNIQUE INDEX `uk_pnode_service_code`(`service_id` ASC, `node_code` ASC) USING BTREE,
   CONSTRAINT `fk_pnode_service` FOREIGN KEY (`service_id`) REFERENCES `design_service_order` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '分期付款节点表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- 支付交易流水（支付宝手机网站支付 / 当面付）
+--   out_trade_no：商户订单号（唯一）
+--   status：0 待支付  1 已支付  2 已关闭
+--   node_id 指向 construction_payment_node，service_id 指向 design_service_order
+-- ----------------------------
+DROP TABLE IF EXISTS `payment_record`;
+CREATE TABLE `payment_record`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `out_trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '商户订单号',
+  `service_id` int NOT NULL COMMENT '关联设计服务单ID',
+  `node_id` int NOT NULL COMMENT '关联分期付款节点ID',
+  `user_id` int NOT NULL COMMENT '付款业主 sys_user.id',
+  `amount` decimal(12, 2) NOT NULL COMMENT '支付金额',
+  `subject` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '订单标题',
+  `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '支付宝交易号',
+  `pay_mode` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'alipay' COMMENT '支付方式',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待支付 1已支付 2已关闭',
+  `notify_time` datetime NULL DEFAULT NULL COMMENT '异步通知时间',
+  `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `out_trade_no`(`out_trade_no` ASC) USING BTREE,
+  INDEX `idx_node`(`node_id` ASC) USING BTREE,
+  INDEX `idx_service`(`service_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付交易流水' ROW_FORMAT = DYNAMIC;
 
 SET FOREIGN_KEY_CHECKS = 1;

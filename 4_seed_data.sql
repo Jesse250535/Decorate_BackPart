@@ -125,8 +125,6 @@ INSERT INTO `sys_home_config` (`id`, `config_type`, `image_url`, `jump_link`, `s
 (1, 1, '/api/uploads/2026/10/27/modern01.png', '/shop', 1, 1),
 (2, 1, '/api/uploads/2026/10/27/franch01.jpg', '/shop', 2, 1),
 (3, 1, '/api/uploads/2026/10/27/xdjy.jpg', '/shop', 3, 1),
-(4, 1, '/api/uploads/2026/10/27/763073098b0a465c81fcb1ad4cd48d35.jpg', '/shop', 4, 1),
-(5, 2, '/api/uploads/2026/10/27/f90c33bad58543cf9f7d8c7cd1028d09.jpg', '/shop', 1, 1),
 (6, 2, '/api/uploads/2026/10/28/a6ad452b11ef4b7ea7c3aec06e2ce8b6.jpg', '/shop', 2, 1);
 
 -- ============================================================
@@ -246,4 +244,79 @@ SET @ddl = (SELECT IF(COUNT(*) = 0,
 PREPARE ddl_stmt FROM @ddl;
 EXECUTE ddl_stmt;
 DEALLOCATE PREPARE ddl_stmt;
+
+-- ============================================================
+-- 结构兜底：效果图审核 + 三稿上限（原 8_effect_audit.sql，已并入本文件）
+--   3.sql 的 design_service_order 建表已含这 4 列，这里先查 information_schema
+--   再决定是否 ALTER：老库自动补齐，新库不会报 Duplicate column name。
+--   effect_audit_status：0 未提交 1 待业主审核 2 业主已通过 3 业主已退回
+--   流程：付定金 → 设计师上传效果图(稿次 +1) → 业主确认合格才可签约
+--         业主不满意 → 退回(附原因) → 设计师重做，最多 3 稿
+-- ============================================================
+
+-- 1) 效果图审核状态
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_service_order` ADD COLUMN `effect_audit_status` tinyint NOT NULL DEFAULT 0 COMMENT ''效果图审核状态 0未提交 1待业主审核 2业主已通过 3业主已退回'' AFTER `effect_drawings`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_service_order' AND COLUMN_NAME = 'effect_audit_status');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 2) 已提交效果图稿次（最多 3 稿）
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_service_order` ADD COLUMN `effect_round` int NOT NULL DEFAULT 0 COMMENT ''已提交效果图稿次（最多3稿）'' AFTER `effect_audit_status`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_service_order' AND COLUMN_NAME = 'effect_round');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 3) 业主审核效果图时间
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_service_order` ADD COLUMN `effect_audit_time` datetime NULL DEFAULT NULL COMMENT ''业主审核效果图时间'' AFTER `effect_round`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_service_order' AND COLUMN_NAME = 'effect_audit_time');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 4) 业主退回效果图的原因
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_service_order` ADD COLUMN `effect_reject_reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT ''业主退回效果图的原因'' AFTER `effect_audit_time`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_service_order' AND COLUMN_NAME = 'effect_reject_reason');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 5) 业主退回效果图时上传的问题图片（多图逗号分隔）
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `design_service_order` ADD COLUMN `effect_reject_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT ''业主退回效果图时上传的问题图片，多图逗号分隔'' AFTER `effect_reject_reason`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'design_service_order' AND COLUMN_NAME = 'effect_reject_images');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 6) 施工阶段验收不通过时上传的凭证图片（多图逗号分隔）
+SET @ddl = (SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `construction_stage` ADD COLUMN `accept_images` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT ''验收不通过凭证图，多图逗号分隔'' AFTER `accept_remark`',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'construction_stage' AND COLUMN_NAME = 'accept_images');
+PREPARE ddl_stmt FROM @ddl;
+EXECUTE ddl_stmt;
+DEALLOCATE PREPARE ddl_stmt;
+
+-- 7) 历史数据兼容：已签约及之后的服务单视为效果图已确认，避免被签约门禁卡住（幂等）
+UPDATE `design_service_order`
+SET `effect_audit_status` = 2
+WHERE `status` >= 9
+  AND (`effect_audit_status` IS NULL OR `effect_audit_status` = 0);
 
