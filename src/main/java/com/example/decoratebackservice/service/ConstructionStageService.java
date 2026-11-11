@@ -181,9 +181,11 @@ public class ConstructionStageService {
      * 业主验收
      *
      * @param pass       true 通过，false 不通过并进入返工
+     * @param images     不通过时业主上传的凭证图，多图逗号分隔（必填）
      * @param reworkDays 不通过时填预计返工天数
      */
-    public ConstructionStage accept(int stageId, int userId, boolean pass, String remark, Integer reworkDays) {
+    public ConstructionStage accept(int stageId, int userId, boolean pass, String remark, String images,
+                                    Integer reworkDays) {
         ConstructionStage stage = requireStage(stageId);
         DesignServiceOrder order = designServiceOrderService.requireOrder(stage.getService_id());
         if (order.getUser_id() != userId) {
@@ -203,8 +205,12 @@ public class ConstructionStageService {
             if (remark == null || remark.isBlank()) {
                 throw new IllegalArgumentException("验收不通过时请填写原因");
             }
+            if (images == null || images.isBlank()) {
+                throw new IllegalArgumentException("验收不通过时请上传现场凭证图片");
+            }
             int days = reworkDays == null || reworkDays < 1 ? 1 : reworkDays;
-            int rows = constructionStageMapper.acceptReject(stageId, userId, now, remark, days, LocalDate.now());
+            int rows = constructionStageMapper.acceptReject(stageId, userId, now, remark, images, days,
+                    LocalDate.now());
             if (rows == 0) {
                 throw new IllegalArgumentException("该阶段状态已变化，请刷新后重试");
             }

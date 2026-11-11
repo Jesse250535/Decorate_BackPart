@@ -43,6 +43,7 @@ public interface ConstructionStageMapper {
             @Result(property = "accept_user_id", column = "accept_user_id"),
             @Result(property = "accept_time", column = "accept_time"),
             @Result(property = "accept_remark", column = "accept_remark"),
+            @Result(property = "accept_images", column = "accept_images"),
             @Result(property = "rework_status", column = "rework_status"),
             @Result(property = "rework_days", column = "rework_days"),
             @Result(property = "rework_start_date", column = "rework_start_date"),
@@ -104,11 +105,13 @@ public interface ConstructionStageMapper {
      * 业主验收不通过：进入返工，累计返工次数并登记返工工期
      */
     @Update("update construction_stage set status = 4, accept_status = 2, accept_user_id = #{user_id}, " +
-            "accept_time = #{time}, accept_remark = #{remark}, rework_status = 1, rework_days = #{rework_days}, " +
+            "accept_time = #{time}, accept_remark = #{remark}, accept_images = #{accept_images}, " +
+            "rework_status = 1, rework_days = #{rework_days}, " +
             "rework_start_date = #{rework_start_date}, rework_count = rework_count + 1 " +
             "where id = #{id} and status = 2 and is_deleted = 0")
     int acceptReject(@Param("id") int id, @Param("user_id") int userId, @Param("time") LocalDateTime time,
-                     @Param("remark") String remark, @Param("rework_days") int reworkDays,
+                     @Param("remark") String remark, @Param("accept_images") String acceptImages,
+                     @Param("rework_days") int reworkDays,
                      @Param("rework_start_date") LocalDate reworkStartDate);
 
     /**

@@ -78,6 +78,9 @@ public class ConstructionStage {
     @Schema(description = "验收意见/不通过原因")
     private String accept_remark;
 
+    @Schema(description = "验收不通过凭证图，多图逗号分隔")
+    private String accept_images;
+
     @Schema(description = "返工状态 0无需返工1返工中2返工完成")
     private int rework_status;
 

@@ -117,8 +117,10 @@ public class ConstructionStageController {
         Integer reworkDays = body.get("rework_days") == null ? null
                 : Integer.valueOf(String.valueOf(body.get("rework_days")));
         String remark = str(body.get("remark"));
+        // 返工必须附现场凭证图，由业主在弹窗内上传后随请求提交
+        String images = str(body.get("images"));
         return Result.success(pass ? "验收通过" : "已提交返工要求",
-                constructionStageService.accept(id, userId, pass, remark, reworkDays));
+                constructionStageService.accept(id, userId, pass, remark, images, reworkDays));
     }
 
     @Operation(summary = "项目经理登记返工完成，重新提交业主验收")

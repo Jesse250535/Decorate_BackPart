@@ -67,8 +67,15 @@ public class PaymentService {
             throw new IllegalArgumentException("支付宝参数未配置完整，请先填写 application.properties 中的 alipay.*");
         }
 
-        // 同一节点重复点击支付时复用未支付的交易，避免刷出一堆脏单
+        // 同一节点重复点击支付时复用未支付的交易，避免刷出一堆脏单。
+        // 但若这笔待支付流水属于另一种支付渠道（例如把 alipay 换成 mock 演示），
+        // 复用会继续把用户送去支付宝，所以先关闭旧单再新建。
+        String mode = properties.isMock() ? "mock" : "alipay";
         PaymentRecord record = recordMapper.findPendingByNode(nodeId);
+        if (record != null && !mode.equals(record.getPay_mode())) {
+            recordMapper.close(record.getId());
+            record = null;
+        }
         if (record == null) {
             record = new PaymentRecord();
             record.setOut_trade_no(buildTradeNo(node.getService_id()));
@@ -77,7 +84,7 @@ public class PaymentService {
             record.setUser_id(userId);
             record.setAmount(amount);
             record.setSubject(node.getNode_name());
-            record.setPay_mode(properties.isMock() ? "mock" : "alipay");
+            record.setPay_mode(mode);
             record.setStatus(0);
             recordMapper.insert(record);
         }
