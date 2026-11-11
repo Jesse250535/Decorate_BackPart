@@ -45,6 +45,14 @@ public class DesignServiceOrderService {
     public static final int STATUS_FINISHED = 12;
     public static final int STATUS_CANCELED = 13;
 
+    /** 效果图审核状态：1 待业主审核 / 2 业主已确认合格 / 3 业主已退回 */
+    public static final int EFFECT_AUDIT_PENDING = 1;
+    public static final int EFFECT_AUDIT_PASSED = 2;
+    public static final int EFFECT_AUDIT_REJECTED = 3;
+
+    /** 效果图最多稿次：业主不满意可退回重做，但最多三稿 */
+    public static final int MAX_EFFECT_ROUND = 3;
+
     private static final DateTimeFormatter NO_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     /** 合同编号日期段（DC + yyyyMMdd + 6 位随机数） */
@@ -159,15 +167,54 @@ public class DesignServiceOrderService {
     }
 
     /**
-     * 设计师提交效果图：已付定金 → 效果图已出
+     * 设计师提交 / 重新提交效果图
+     * <p>
+     * 前置：定金已支付（status=5）；若是业主退回后的重做，则 status=6 且审核状态为「已退回」。
+     * 每次提交稿次 +1，最多三稿，提交后进入「待业主审核」，业主确认合格前不能签合同。
      */
     public int submitEffectDrawing(int id, int designerId, String drawings) {
         requireDesigner(id, designerId);
         if (drawings == null || drawings.isBlank()) {
             throw new IllegalArgumentException("请上传效果图");
         }
+        DesignServiceOrder order = requireOrder(id);
+        int round = order.getEffect_round() == null ? 0 : order.getEffect_round();
+        if (round >= MAX_EFFECT_ROUND) {
+            throw new IllegalArgumentException("效果图已达三稿上限，无法再次提交，请与业主协商确认当前稿件");
+        }
         return check(designServiceOrderMapper.markEffectDrawing(id, LocalDateTime.now(), drawings),
-                "当前状态不能提交效果图，请确认定金是否已支付");
+                "当前状态不能提交效果图，请确认定金是否已支付、效果图是否已被退回");
+    }
+
+    /**
+     * 业主审核效果图：合格则进入签约阶段，不合格则退回设计师重做（最多三稿）
+     *
+     * @param pass true 确认合格 / false 退回重做
+     */
+    public int reviewEffectDrawing(int id, int userId, boolean pass, String reason) {
+        requireOwner(id, userId);
+        DesignServiceOrder order = requireOrder(id);
+        // 效果图阶段（6）之后设计师可能已提交报价（7/8），审核仍需允许
+        if (order.getStatus() < STATUS_EFFECT_DRAWING || order.getStatus() > STATUS_QUOTE_CONFIRMED) {
+            throw new IllegalArgumentException("效果图尚未提交，暂不能审核");
+        }
+        Integer audit = order.getEffect_audit_status();
+        if (audit == null || audit != EFFECT_AUDIT_PENDING) {
+            throw new IllegalArgumentException("效果图当前不在待审核状态，请刷新后重试");
+        }
+        if (pass) {
+            return check(designServiceOrderMapper.markEffectPass(id, LocalDateTime.now()),
+                    "当前状态不能确认效果图");
+        }
+        int round = order.getEffect_round() == null ? 0 : order.getEffect_round();
+        if (round >= MAX_EFFECT_ROUND) {
+            throw new IllegalArgumentException("效果图已达三稿上限，请确认当前稿件或与设计师协商修改");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("请填写不满意的原因，便于设计师针对性修改");
+        }
+        return check(designServiceOrderMapper.markEffectReject(id, LocalDateTime.now(), reason),
+                "当前状态不能退回效果图");
     }
 
     /**

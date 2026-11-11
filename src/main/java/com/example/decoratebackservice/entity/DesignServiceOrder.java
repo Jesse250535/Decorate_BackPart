@@ -90,6 +90,18 @@ public class DesignServiceOrder {
     @Schema(description = "效果图地址，多图逗号分隔")
     private String effect_drawings;
 
+    @Schema(description = "效果图审核状态 0未提交 1待业主审核 2已通过 3已退回")
+    private Integer effect_audit_status;
+
+    @Schema(description = "已提交效果图稿次（最多 3 稿）")
+    private Integer effect_round;
+
+    @Schema(description = "业主审核效果图时间")
+    private LocalDateTime effect_audit_time;
+
+    @Schema(description = "业主退回效果图的原因")
+    private String effect_reject_reason;
+
     @Schema(description = "当前生效报价单ID")
     private Integer quote_id;
 

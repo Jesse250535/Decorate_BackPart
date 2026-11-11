@@ -97,6 +97,11 @@ public class ContractSignService {
                 || order.getStatus() > DesignServiceOrderService.STATUS_QUOTE_CONFIRMED) {
             throw new IllegalArgumentException("请先支付定金，再签订合同");
         }
+        // 效果图必须由业主确认合格后才能签约，退回待重做（最多 3 稿）期间不允许签
+        if (order.getEffect_audit_status() == null
+                || order.getEffect_audit_status() != DesignServiceOrderService.EFFECT_AUDIT_PASSED) {
+            throw new IllegalArgumentException("请先确认效果图合格，再签订合同");
+        }
 
         String signature = str(body == null ? null : body.get("signature_url"));
         if (signature == null || signature.isBlank()) {

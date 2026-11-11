@@ -49,6 +49,10 @@ public interface DesignServiceOrderMapper {
             @Result(property = "deposit_time", column = "deposit_time"),
             @Result(property = "effect_drawing_time", column = "effect_drawing_time"),
             @Result(property = "effect_drawings", column = "effect_drawings"),
+            @Result(property = "effect_audit_status", column = "effect_audit_status"),
+            @Result(property = "effect_round", column = "effect_round"),
+            @Result(property = "effect_audit_time", column = "effect_audit_time"),
+            @Result(property = "effect_reject_reason", column = "effect_reject_reason"),
             @Result(property = "quote_id", column = "quote_id"),
             @Result(property = "quote_time", column = "quote_time"),
             @Result(property = "contract_id", column = "contract_id"),
@@ -112,9 +116,31 @@ public interface DesignServiceOrderMapper {
             "where id = #{id} and status = 4 and is_deleted = 0")
     int markDeposit(@Param("id") int id, @Param("amount") java.math.BigDecimal amount, @Param("time") LocalDateTime time);
 
-    @Update("update design_service_order set status = 6, effect_drawing_time = #{time}, effect_drawings = #{drawings} " +
-            "where id = #{id} and status = 5 and is_deleted = 0")
+    /**
+     * 提交 / 重新提交效果图：已付定金（5）可首次提交，退回（审核状态 3）可重做提交。
+     * 稿次自动 +1，最多 3 稿；提交后进入「待业主审核」。
+     */
+    @Update("update design_service_order set status = 6, effect_drawing_time = #{time}, effect_drawings = #{drawings}, " +
+            "effect_round = ifnull(effect_round, 0) + 1, effect_audit_status = 1, " +
+            "effect_audit_time = null, effect_reject_reason = null " +
+            "where id = #{id} and is_deleted = 0 and ifnull(effect_round, 0) < 3 " +
+            "and (status = 5 or (status between 6 and 8 and effect_audit_status = 3))")
     int markEffectDrawing(@Param("id") int id, @Param("time") LocalDateTime time, @Param("drawings") String drawings);
+
+    /**
+     * 业主确认效果图合格：待审核（1）→ 已通过（2）
+     */
+    @Update("update design_service_order set effect_audit_status = 2, effect_audit_time = #{time} " +
+            "where id = #{id} and status between 6 and 8 and effect_audit_status = 1 and is_deleted = 0")
+    int markEffectPass(@Param("id") int id, @Param("time") LocalDateTime time);
+
+    /**
+     * 业主退回效果图：待审核（1）→ 已退回（3），附退回原因供设计师重做
+     */
+    @Update("update design_service_order set effect_audit_status = 3, effect_audit_time = #{time}, " +
+            "effect_reject_reason = #{reason} " +
+            "where id = #{id} and status between 6 and 8 and effect_audit_status = 1 and is_deleted = 0")
+    int markEffectReject(@Param("id") int id, @Param("time") LocalDateTime time, @Param("reason") String reason);
 
     @Update("update design_service_order set status = 7, quote_id = #{quote_id}, quote_time = #{time} " +
             "where id = #{id} and status = 6 and is_deleted = 0")
@@ -130,11 +156,12 @@ public interface DesignServiceOrderMapper {
     int markStart(@Param("id") int id);
 
     /**
-     * 业主线上签合同：平面图确认后（4~8）任一状态 → 已签合同（9）
+     * 业主线上签合同：付定金（5）~ 报价已确认（8），且效果图已由业主确认合格 → 已签合同（9）
      */
     @Update("update design_service_order set status = 9, contract_id = #{contract_id}, " +
             "manager_id = ifnull(#{manager_id,jdbcType=BIGINT}, manager_id), contract_time = #{time}, " +
-            "start_date = #{start_date} where id = #{id} and status between 4 and 8 and is_deleted = 0")
+            "start_date = #{start_date} where id = #{id} and status between 5 and 8 " +
+            "and effect_audit_status = 2 and is_deleted = 0")
     int markOwnerContract(@Param("id") int id, @Param("contract_id") int contract_id,
                           @Param("manager_id") Integer manager_id, @Param("time") LocalDateTime time,
                           @Param("start_date") LocalDate start_date);

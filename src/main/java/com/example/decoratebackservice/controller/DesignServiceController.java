@@ -215,8 +215,26 @@ public class DesignServiceController {
         if (!StaffRole.isDesigner(authentication)) {
             return Result.forbidden("仅设计师可提交效果图");
         }
-        return Result.success("效果图已提交，请随后提交报价单",
+        return Result.success("效果图已提交，等待业主确认",
                 designServiceOrderService.submitEffectDrawing(id, userId, str(body.get("drawings"))));
+    }
+
+    @Operation(summary = "业主审核效果图：pass=true 确认合格，false 退回重做（最多三稿）")
+    @PutMapping("/{id}/effect-review")
+    public Result<Integer> reviewEffectDrawing(@PathVariable int id,
+                                               @RequestBody Map<String, Object> body,
+                                               Authentication authentication) {
+        Integer userId = currentUserId(authentication);
+        if (userId == null) {
+            return Result.unauthorized("请先登录");
+        }
+        if (StaffRole.isDesigner(authentication) || StaffRole.isManager(authentication)) {
+            return Result.forbidden("仅业主可以审核效果图");
+        }
+        Object passFlag = body.get("pass");
+        boolean pass = Boolean.TRUE.equals(passFlag) || "true".equalsIgnoreCase(String.valueOf(passFlag));
+        return Result.success(pass ? "效果图已确认合格，可以签订合同" : "已退回设计师重新设计效果图",
+                designServiceOrderService.reviewEffectDrawing(id, userId, pass, str(body.get("reason"))));
     }
 
     /* ==================== 业主在线签合同 ==================== */
@@ -395,8 +413,19 @@ public class DesignServiceController {
         Map<String, Object> data = new HashMap<>();
         data.put("order", order);
         DesignQuote quote = designQuoteService.findActive(id);
+        List<?> quoteItems = List.of();
+        if (quote != null) {
+            quoteItems = designQuoteService.findItems(quote.getId());
+        }
+        // 业主在签约前只看到定金，不暴露报价总额与硬/软装明细
+        if (owner && order.getStatus() < DesignServiceOrderService.STATUS_CONTRACTED && quote != null) {
+            quote.setHard_amount(null);
+            quote.setSoft_amount(null);
+            quote.setTotal_amount(null);
+            quoteItems = List.of();
+        }
         data.put("quote", quote);
-        data.put("quote_items", quote == null ? List.of() : designQuoteService.findItems(quote.getId()));
+        data.put("quote_items", quoteItems);
         List<ConstructionStage> stages = constructionStageService.findByService(id);
         data.put("stages", stages);
         List<ConstructionPaymentNode> nodes = paymentNodeService.findByService(id);
